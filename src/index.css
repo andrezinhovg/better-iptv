@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-bg: 249 250 251;
+  --color-surface: 255 255 255;
+  --color-surface-hover: 243 244 246;
+  --color-text: 17 24 39;
+  --color-text-muted: 75 85 99;
+  --color-border: 229 231 235;
+  --color-accent: 220 38 38;
+  --color-accent-hover: 185 28 28;
+}
+
+.dark {
+  --color-bg: 3 7 18;
+  --color-surface: 17 24 39;
+  --color-surface-hover: 31 41 55;
+  --color-text: 249 250 251;
+  --color-text-muted: 156 163 175;
+  --color-border: 55 65 81;
+  --color-accent: 239 68 68;
+  --color-accent-hover: 248 113 113;
+}
