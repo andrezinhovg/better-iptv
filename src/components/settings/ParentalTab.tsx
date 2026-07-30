@@ -75,7 +75,7 @@ export default function ParentalTab({
                   <div className="flex gap-2">
                     <button
                       onClick={onChangePin}
-                      className="rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
+                      className="rounded-lg bg-surface-hover px-4 py-2 text-text hover:bg-border"
                     >
                       Change PIN
                     </button>
