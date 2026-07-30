@@ -29,7 +29,8 @@ CLAUDE.md
 *.claude
 .serena/
 claudedocs/
-docs/
+docs/*
+!docs/superpowers/
 plans/
 
 ## MISC
