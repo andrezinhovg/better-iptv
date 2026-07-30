@@ -241,12 +241,12 @@ export default function MainScreen() {
     if (isNaN(seriesId)) {
       logger.error('Failed to parse series ID from URL:', selectedSeries.url);
       return (
-        <div className="flex h-screen items-center justify-center bg-gray-900">
+        <div className="flex h-screen items-center justify-center bg-bg">
           <div className="text-center">
             <p className="mb-4 text-red-400">Failed to load series: Invalid URL format</p>
             <button
               onClick={() => setSelectedSeries(null)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="rounded-lg bg-accent px-5 py-2.5 text-white hover:bg-accent-hover"
             >
               Go Back
             </button>
