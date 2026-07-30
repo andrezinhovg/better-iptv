@@ -5,8 +5,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { usePlayerStore } from './stores/player-store';
 import { getPlaylists, getChannels, getActiveProfileId } from './lib/tauri';
 import { logger } from './lib/logger';
+import { useTheme } from './hooks/useTheme';
 
 export default function App() {
+  useTheme();
   const {
     isSetupComplete,
     setIsSetupComplete,
