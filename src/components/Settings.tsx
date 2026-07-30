@@ -12,6 +12,7 @@ import {
 import type { EpgStatus } from '../lib/tauri';
 import { usePlayerStore } from '../stores/player-store';
 import { logger } from '../lib/logger';
+import { applyTheme } from '../hooks/useTheme';
 import ProfileManager from './ProfileManager';
 import PinEntryModal from './modals/PinEntryModal';
 import ChannelBlockingModal from './modals/ChannelBlockingModal';
@@ -51,6 +52,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const [epgStatus, setEpgStatus] = useState<EpgStatus | null>(null);
   const [isUpdatingEpg, setIsUpdatingEpg] = useState(false);
   const [theme, setTheme] = useState<Theme>('system');
+  const [originalTheme, setOriginalTheme] = useState<Theme>('system');
   const [audioLang, setAudioLang] = useState<LanguageCode>('none');
   const [subtitleLang, setSubtitleLang] = useState<LanguageCode>('none');
   const [playlistUserAgentMode, setPlaylistUserAgentMode] = useState<UserAgentMode>('default');
@@ -93,7 +95,10 @@ export default function Settings({ onClose }: SettingsProps) {
           setEpgUrl(savedEpgUrl);
           setOriginalEpgUrl(savedEpgUrl);
         }
-        if (savedTheme) setTheme(savedTheme as Theme);
+        if (savedTheme) {
+          setTheme(savedTheme as Theme);
+          setOriginalTheme(savedTheme as Theme);
+        }
 
         if (
           savedPlaylistUserAgentMode &&
@@ -313,6 +318,18 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
+  // Theme changes preview immediately; handleSave persists, handleClose
+  // (used by Cancel and the X button) reverts to the last-saved value.
+  const handleThemeChange = (t: Theme) => {
+    setTheme(t);
+    applyTheme(t);
+  };
+
+  const handleClose = () => {
+    applyTheme(originalTheme);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-surface shadow-xl">
@@ -320,7 +337,7 @@ export default function Settings({ onClose }: SettingsProps) {
         <div className="flex items-center justify-between border-b border-border p-6">
           <h2 className="text-fluid-2xl font-bold text-text">Settings</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg p-2 transition-colors hover:bg-surface-hover"
           >
             <X className="h-5 w-5 text-text-muted" />
@@ -346,7 +363,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 isUpdatingEpg={isUpdatingEpg}
                 onForceEpgUpdate={handleForceEpgUpdate}
                 theme={theme}
-                onThemeChange={setTheme}
+                onThemeChange={handleThemeChange}
                 audioLang={audioLang}
                 onAudioLangChange={setAudioLang}
                 subtitleLang={subtitleLang}
@@ -399,7 +416,7 @@ export default function Settings({ onClose }: SettingsProps) {
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 border-t border-border p-6">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg px-4 py-2 text-text-muted transition-colors hover:bg-surface-hover"
           >
             Cancel
