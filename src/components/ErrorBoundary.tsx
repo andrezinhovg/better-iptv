@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   <summary className="cursor-pointer text-fluid-sm text-text-muted hover:text-text">
                     Error details
                   </summary>
-                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-bg p-3 text-fluid-xs text-red-400">
+                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-surface-hover p-3 text-fluid-xs text-red-600 dark:text-red-400">
                     {this.state.error.message}
                     {this.state.error.stack && (
                       <>
@@ -147,7 +147,7 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
       // Compact error UI for sections
       if (this.props.compact) {
         return (
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-red-500/10 p-4 text-red-400">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-red-500/10 p-4 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-5 w-5" />
             <span className="text-fluid-sm">Fel i {this.props.section}</span>
             <button
@@ -164,7 +164,7 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
       // Standard section error UI
       return (
         <div className="flex flex-col items-center justify-center rounded-lg border border-red-500/20 bg-red-500/5 p-8">
-          <AlertTriangle className="mb-4 h-12 w-12 text-red-400" />
+          <AlertTriangle className="mb-4 h-12 w-12 text-red-600 dark:text-red-400" />
           <h3 className="mb-2 text-fluid-lg font-medium text-text">
             Något gick fel i {this.props.section}
           </h3>
@@ -176,7 +176,7 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
               <summary className="cursor-pointer text-fluid-xs text-text-muted hover:text-text">
                 Tekniska detaljer
               </summary>
-              <pre className="mt-2 max-h-32 overflow-auto rounded bg-bg p-2 text-fluid-xs text-red-400">
+              <pre className="mt-2 max-h-32 overflow-auto rounded bg-surface-hover p-2 text-fluid-xs text-red-600 dark:text-red-400">
                 {this.state.error.message}
               </pre>
             </details>

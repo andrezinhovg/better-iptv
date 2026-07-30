@@ -48,7 +48,7 @@ export default function ChannelBlockingModal({
   const virtualizer = useVirtualizer({
     count: filteredChannels.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 68, // Approximate height of each channel item
+    estimateSize: () => 96, // Fluid typography clamps larger at 4K, so 68px underestimates row height
     overscan: 5,
   });
 

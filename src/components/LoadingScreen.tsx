@@ -43,7 +43,7 @@ export const LoadingScreen = memo(function LoadingScreen({
           <div className="space-y-2 text-text-muted">
             {details!.live_count! > 0 && (
               <p className="text-fluid-lg">
-                <span className="font-semibold text-cyan-400">
+                <span className="font-semibold text-cyan-600 dark:text-cyan-400">
                   {details!.live_count!.toLocaleString()}
                 </span>{' '}
                 live streams
@@ -51,7 +51,7 @@ export const LoadingScreen = memo(function LoadingScreen({
             )}
             {details!.vod_count! > 0 && (
               <p className="text-fluid-lg">
-                <span className="font-semibold text-purple-400">
+                <span className="font-semibold text-purple-600 dark:text-purple-400">
                   {details!.vod_count!.toLocaleString()}
                 </span>{' '}
                 VOD streams
@@ -59,7 +59,7 @@ export const LoadingScreen = memo(function LoadingScreen({
             )}
             {details!.series_count! > 0 && (
               <p className="text-fluid-lg">
-                <span className="font-semibold text-blue-400">
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
                   {details!.series_count!.toLocaleString()}
                 </span>{' '}
                 series
