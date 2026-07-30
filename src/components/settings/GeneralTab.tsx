@@ -92,18 +92,18 @@ export default function GeneralTab({
       {/* Playlist Refresh */}
       {onRefreshPlaylist && playlistName && (
         <section>
-          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Playlist</h3>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/50">
+          <h3 className="mb-4 text-fluid-lg font-semibold text-text">Playlist</h3>
+          <div className="rounded-lg border border-border bg-bg p-4 dark:bg-surface-hover/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">{playlistName}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="font-medium text-text">{playlistName}</p>
+                <p className="text-fluid-sm text-text-muted">
                   Refresh to sync with the latest channel list
                 </p>
               </div>
               <button
                 onClick={onRefreshPlaylist}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
+                className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-fluid-sm text-white transition-colors hover:bg-accent-hover"
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
@@ -115,18 +115,18 @@ export default function GeneralTab({
 
       {/* Playlist Request Settings */}
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="mb-4 text-fluid-lg font-semibold text-text">
           Playlist Requests
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
               User-Agent
             </label>
             <select
               value={playlistUserAgentMode}
               onChange={(e) => onPlaylistUserAgentModeChange(e.target.value as UserAgentMode)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+              className="w-full rounded-lg border border-border bg-surface-hover px-4 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-accent dark:[color-scheme:dark]"
             >
               {USER_AGENT_OPTIONS.map((option) => (
                 <option key={option.mode} value={option.mode}>
@@ -134,14 +134,14 @@ export default function GeneralTab({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-fluid-xs text-text-muted">
               Used when downloading playlists and Xtream-provided EPG data
             </p>
-            <p className="mt-2 break-all text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-2 break-all text-fluid-xs text-text-muted">
               Current header: <span className="font-mono">{userAgentPreview.value}</span>
             </p>
             {userAgentPreview.usingFallback && (
-              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              <p className="mt-1 text-fluid-xs text-amber-600 dark:text-amber-400">
                 Custom value is currently invalid or empty, fallback to default will be used.
               </p>
             )}
@@ -149,7 +149,7 @@ export default function GeneralTab({
 
           {playlistUserAgentMode === 'custom' && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
                 Custom User-Agent
               </label>
               <input
@@ -157,7 +157,7 @@ export default function GeneralTab({
                 value={playlistUserAgentCustom}
                 onChange={(e) => onPlaylistUserAgentCustomChange(e.target.value)}
                 placeholder="Mozilla/5.0 ..."
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="w-full rounded-lg border border-border bg-surface-hover px-4 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-accent"
               />
             </div>
           )}
@@ -166,12 +166,12 @@ export default function GeneralTab({
 
       {/* EPG Settings */}
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="mb-4 text-fluid-lg font-semibold text-text">
           Electronic Program Guide (EPG)
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
               EPG URL (XMLTV format)
             </label>
             <input
@@ -179,15 +179,15 @@ export default function GeneralTab({
               value={epgUrl}
               onChange={(e) => onEpgUrlChange(e.target.value)}
               placeholder="http://example.com/epg.xml"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-border bg-surface-hover px-4 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-accent"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-fluid-xs text-text-muted">
               If EPG data is not provided with Xtream, we recommend using:{' '}
               <a
                 href="https://iptv-epg.org/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline dark:text-blue-400"
+                className="text-accent hover:underline"
               >
                 https://iptv-epg.org/
               </a>
@@ -195,11 +195,11 @@ export default function GeneralTab({
           </div>
 
           {/* EPG Status Card */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/50">
+          <div className="rounded-lg border border-border bg-bg p-4 dark:bg-surface-hover/50">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</span>
+              <span className="text-fluid-sm font-medium text-text-muted">Status</span>
               {epgStatus?.has_url && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-fluid-xs text-text-muted">
                   {epgStatus.program_count.toLocaleString()} programs
                 </span>
               )}
@@ -208,11 +208,11 @@ export default function GeneralTab({
             {epgStatus ? (
               <div className="space-y-2">
                 {epgStatus.last_fetched ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-fluid-sm text-text-muted">
                     Last updated: {new Date(epgStatus.last_fetched).toLocaleString()}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-fluid-sm text-text-muted">
                     {epgStatus.has_url ? 'Never updated' : 'No EPG URL configured'}
                   </p>
                 )}
@@ -220,14 +220,14 @@ export default function GeneralTab({
                 <button
                   onClick={onForceEpgUpdate}
                   disabled={!epgStatus.has_url || isUpdatingEpg}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-fluid-sm text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RefreshCw className={`h-4 w-4 ${isUpdatingEpg ? 'animate-spin' : ''}`} />
                   {isUpdatingEpg ? 'Updating...' : 'Update Now'}
                 </button>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Loading status...</p>
+              <p className="text-fluid-sm text-text-muted">Loading status...</p>
             )}
           </div>
         </div>
@@ -235,10 +235,10 @@ export default function GeneralTab({
 
       {/* Appearance Settings */}
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Appearance</h3>
+        <h3 className="mb-4 text-fluid-lg font-semibold text-text">Appearance</h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
               Theme
             </label>
             <div className="grid grid-cols-3 gap-3">
@@ -248,8 +248,8 @@ export default function GeneralTab({
                   onClick={() => onThemeChange(t)}
                   className={`rounded-lg border px-4 py-2 capitalize ${
                     theme === t
-                      ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white'
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border bg-surface-hover text-text'
                   }`}
                 >
                   {t}
@@ -262,18 +262,18 @@ export default function GeneralTab({
 
       {/* Language Settings */}
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="mb-4 text-fluid-lg font-semibold text-text">
           Language Settings
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
               Default Audio Language
             </label>
             <select
               value={audioLang}
               onChange={(e) => onAudioLangChange(e.target.value as LanguageCode)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+              className="w-full rounded-lg border border-border bg-surface-hover px-4 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-accent dark:[color-scheme:dark]"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -281,19 +281,19 @@ export default function GeneralTab({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-fluid-xs text-text-muted">
               Preferred audio track language (if available in stream)
             </p>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-fluid-sm font-medium text-text-muted">
               Default Subtitles Language
             </label>
             <select
               value={subtitleLang}
               onChange={(e) => onSubtitleLangChange(e.target.value as LanguageCode)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+              className="w-full rounded-lg border border-border bg-surface-hover px-4 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-accent dark:[color-scheme:dark]"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -301,7 +301,7 @@ export default function GeneralTab({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-fluid-xs text-text-muted">
               Preferred subtitle language (if available in stream)
             </p>
           </div>

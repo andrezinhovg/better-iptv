@@ -10,14 +10,14 @@ export default function PlaybackTab({
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Playback</h3>
+        <h3 className="mb-4 text-fluid-lg font-semibold text-text">Playback</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-fluid-sm font-medium text-text-muted">
                 Hardware Acceleration
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-fluid-xs text-text-muted">
                 Use GPU for video decoding (recommended)
               </p>
             </div>
@@ -25,7 +25,7 @@ export default function PlaybackTab({
               type="checkbox"
               checked={hardwareAcceleration}
               onChange={(e) => onHardwareAccelerationChange(e.target.checked)}
-              className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded text-accent focus:ring-accent"
             />
           </div>
         </div>
