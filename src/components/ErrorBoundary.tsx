@@ -52,8 +52,8 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex h-screen items-center justify-center bg-gray-900">
-          <div className="mx-4 w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">
+        <div className="flex h-screen items-center justify-center bg-bg">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
             <div className="text-center">
               <div className="mb-4">
                 <svg
@@ -71,16 +71,16 @@ export class ErrorBoundary extends Component<Props, State> {
                   />
                 </svg>
               </div>
-              <h2 className="mb-2 text-xl font-semibold text-white">Something went wrong</h2>
-              <p className="mb-6 text-gray-400">
+              <h2 className="mb-2 text-fluid-xl font-semibold text-text">Something went wrong</h2>
+              <p className="mb-6 text-fluid-base text-text-muted">
                 An unexpected error occurred. Please try again or restart the application.
               </p>
               {this.state.error && (
                 <details className="mb-6 text-left">
-                  <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-400">
+                  <summary className="cursor-pointer text-fluid-sm text-text-muted hover:text-text">
                     Error details
                   </summary>
-                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-gray-900 p-3 text-xs text-red-400">
+                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-bg p-3 text-fluid-xs text-red-400">
                     {this.state.error.message}
                     {this.state.error.stack && (
                       <>
@@ -94,13 +94,13 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex justify-center gap-3">
                 <button
                   onClick={this.handleRetry}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+                  className="rounded-lg bg-accent px-4 py-2 text-white transition-colors hover:bg-accent-hover"
                 >
                   Try Again
                 </button>
                 <button
                   onClick={() => window.location.reload()}
-                  className="rounded-lg bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600"
+                  className="rounded-lg bg-surface-hover px-4 py-2 text-text transition-colors hover:bg-border"
                 >
                   Reload App
                 </button>
@@ -149,7 +149,7 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
         return (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-red-500/10 p-4 text-red-400">
             <AlertTriangle className="h-5 w-5" />
-            <span className="text-sm">Fel i {this.props.section}</span>
+            <span className="text-fluid-sm">Fel i {this.props.section}</span>
             <button
               onClick={this.handleRetry}
               className="ml-2 rounded bg-red-500/20 p-1 hover:bg-red-500/30"
@@ -165,18 +165,18 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
       return (
         <div className="flex flex-col items-center justify-center rounded-lg border border-red-500/20 bg-red-500/5 p-8">
           <AlertTriangle className="mb-4 h-12 w-12 text-red-400" />
-          <h3 className="mb-2 text-lg font-medium text-white">
+          <h3 className="mb-2 text-fluid-lg font-medium text-text">
             Något gick fel i {this.props.section}
           </h3>
-          <p className="mb-4 text-sm text-gray-400">
+          <p className="mb-4 text-fluid-sm text-text-muted">
             Ett fel uppstod. Du kan försöka igen eller ladda om sidan.
           </p>
           {this.state.error && (
             <details className="mb-4 w-full max-w-md text-left">
-              <summary className="cursor-pointer text-xs text-gray-500 hover:text-gray-400">
+              <summary className="cursor-pointer text-fluid-xs text-text-muted hover:text-text">
                 Tekniska detaljer
               </summary>
-              <pre className="mt-2 max-h-32 overflow-auto rounded bg-gray-900 p-2 text-xs text-red-400">
+              <pre className="mt-2 max-h-32 overflow-auto rounded bg-bg p-2 text-fluid-xs text-red-400">
                 {this.state.error.message}
               </pre>
             </details>
@@ -184,7 +184,7 @@ export class SectionErrorBoundary extends Component<SectionErrorBoundaryProps, S
           <div className="flex gap-2">
             <button
               onClick={this.handleRetry}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-fluid-sm text-white hover:bg-accent-hover"
             >
               <RefreshCw className="h-4 w-4" />
               Försök igen
