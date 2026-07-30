@@ -278,25 +278,30 @@ pub fn merge_channels(
                 params![playlist_id],
             )?;
         } else {
-            let ids_to_keep: Vec<i64> = matched_ids.into_iter().collect();
-            let placeholders: String = (0..ids_to_keep.len())
-                .map(|i| format!("?{}", i + 2))
-                .collect::<Vec<_>>()
-                .join(",");
-            let sql = format!(
-                "DELETE FROM channels WHERE playlist_id = ?1 AND id NOT IN ({})",
-                placeholders
-            );
+            // A `NOT IN (?, ?, ..., ?)` with one bound param per row blows past
+            // SQLite's expression-depth limit (SQLITE_MAX_EXPR_DEPTH, default 1000)
+            // for large playlists. Stage the ids to keep in a temp table instead,
+            // so the DELETE only ever references a single subquery.
+            tx.execute_batch(
+                "CREATE TEMP TABLE IF NOT EXISTS channels_to_keep (id INTEGER PRIMARY KEY);
+                 DELETE FROM channels_to_keep;",
+            )?;
 
-            let mut delete_params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
-            delete_params.push(Box::new(playlist_id));
-            for id in &ids_to_keep {
-                delete_params.push(Box::new(*id));
+            {
+                let mut keep_stmt =
+                    tx.prepare_cached("INSERT INTO channels_to_keep (id) VALUES (?1)")?;
+                for id in &matched_ids {
+                    keep_stmt.execute(params![id])?;
+                }
             }
-            let param_refs: Vec<&dyn rusqlite::types::ToSql> =
-                delete_params.iter().map(|p| p.as_ref()).collect();
 
-            tx.execute(&sql, param_refs.as_slice())?;
+            tx.execute(
+                "DELETE FROM channels WHERE playlist_id = ?1
+                 AND id NOT IN (SELECT id FROM channels_to_keep)",
+                params![playlist_id],
+            )?;
+
+            tx.execute_batch("DELETE FROM channels_to_keep;")?;
         }
     }
 
@@ -457,6 +462,51 @@ mod tests {
 
         let stored = get_channels(&conn, Some(playlist_id)).unwrap();
         assert_eq!(stored.len(), 100);
+    }
+
+    /// Regression test: a `NOT IN` clause built with one bound parameter per row
+    /// used to blow past SQLite's expression-depth limit (default 1000) on large
+    /// playlists, surfacing a raw SQL error to the user during refresh.
+    #[test]
+    fn test_merge_channels_deletes_stale_rows_in_large_playlist() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "Large Playlist");
+
+        const KEEP_COUNT: i32 = 1500;
+        let existing: Vec<Channel> = (0..KEEP_COUNT + 1)
+            .map(|i| Channel {
+                id: None,
+                playlist_id,
+                name: format!("Channel {}", i),
+                url: format!("http://example.com/stream{}.m3u8", i),
+                logo: None,
+                group_name: Some("Large Group".to_string()),
+                epg_id: None,
+                tvg_name: None,
+                content_type: "live".to_string(),
+                is_favorite: false,
+                sort_order: i,
+                category_order: 0,
+                created_at: None,
+            })
+            .collect();
+        create_channels_batch(&conn, &existing).unwrap();
+        assert_eq!(
+            get_channels(&conn, Some(playlist_id)).unwrap().len(),
+            (KEEP_COUNT + 1) as usize
+        );
+
+        // Refresh matches all but one channel (by name+group_name), so it must
+        // delete exactly one stale row out of a `keep` set of 1500.
+        let refreshed: Vec<Channel> = existing[..KEEP_COUNT as usize].to_vec();
+        let result = merge_channels(&conn, playlist_id, &refreshed, false).unwrap();
+
+        assert_eq!(result.removed, 1);
+        assert_eq!(result.updated, KEEP_COUNT as usize);
+        assert_eq!(
+            get_channels(&conn, Some(playlist_id)).unwrap().len(),
+            KEEP_COUNT as usize
+        );
     }
 
     // ========== Settings Tests ==========
