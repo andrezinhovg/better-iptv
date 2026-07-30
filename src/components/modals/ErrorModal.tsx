@@ -19,26 +19,23 @@ export default function ErrorModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+      <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/20">
               <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+            <h3 className="text-fluid-xl font-bold text-text">{title}</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <button onClick={onClose} className="rounded-lg p-1 hover:bg-surface-hover">
+            <X className="h-5 w-5 text-text-muted" />
           </button>
         </div>
 
         {/* Error Message */}
         <div className="mb-6">
-          <p className="text-gray-700 dark:text-gray-300">{message}</p>
+          <p className="text-fluid-base text-text-muted">{message}</p>
         </div>
 
         {/* Action */}
