@@ -28,7 +28,7 @@ export const LoadingScreen = memo(function LoadingScreen({
     (details.live_count || 0) + (details.vod_count || 0) + (details.series_count || 0) > 0;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg">
       {/* Logo with pulse animation */}
       <div className="mb-8 animate-pulse">
         <img src={logoImage} alt="Better-IPTV Logo" className="h-64 w-64 drop-shadow-2xl" />
@@ -36,13 +36,13 @@ export const LoadingScreen = memo(function LoadingScreen({
 
       {/* Loading message */}
       <div className="text-center">
-        <p className="mb-4 text-xl font-medium text-white">{message}</p>
+        <p className="mb-4 text-fluid-xl font-medium text-text">{message}</p>
 
         {/* Detailed progress */}
         {showDetails && (
-          <div className="space-y-2 text-gray-300">
+          <div className="space-y-2 text-text-muted">
             {details!.live_count! > 0 && (
-              <p className="text-lg">
+              <p className="text-fluid-lg">
                 <span className="font-semibold text-cyan-400">
                   {details!.live_count!.toLocaleString()}
                 </span>{' '}
@@ -50,7 +50,7 @@ export const LoadingScreen = memo(function LoadingScreen({
               </p>
             )}
             {details!.vod_count! > 0 && (
-              <p className="text-lg">
+              <p className="text-fluid-lg">
                 <span className="font-semibold text-purple-400">
                   {details!.vod_count!.toLocaleString()}
                 </span>{' '}
@@ -58,7 +58,7 @@ export const LoadingScreen = memo(function LoadingScreen({
               </p>
             )}
             {details!.series_count! > 0 && (
-              <p className="text-lg">
+              <p className="text-fluid-lg">
                 <span className="font-semibold text-blue-400">
                   {details!.series_count!.toLocaleString()}
                 </span>{' '}
@@ -66,7 +66,7 @@ export const LoadingScreen = memo(function LoadingScreen({
               </p>
             )}
             {showProgress && (
-              <p className="mt-4 text-xl font-bold text-white">
+              <p className="mt-4 text-fluid-xl font-bold text-text">
                 Total: {progress!.toLocaleString()} channels
               </p>
             )}
