@@ -16,15 +16,15 @@ interface BreakpointConfig {
 
 // Breakpoint configuration - easily adjustable
 const BREAKPOINTS: BreakpointConfig[] = [
-  { minWidth: 0, columns: 2, minCardHeight: 200, maxCardHeight: 240 },
-  { minWidth: 640, columns: 3, minCardHeight: 220, maxCardHeight: 260 },
-  { minWidth: 1024, columns: 4, minCardHeight: 240, maxCardHeight: 300 },
-  { minWidth: 1440, columns: 5, minCardHeight: 260, maxCardHeight: 320 },
-  { minWidth: 1920, columns: 6, minCardHeight: 280, maxCardHeight: 360 },
-  { minWidth: 2560, columns: 7, minCardHeight: 300, maxCardHeight: 400 },
+  { minWidth: 0, columns: 2, minCardHeight: 240, maxCardHeight: 300 },
+  { minWidth: 640, columns: 3, minCardHeight: 260, maxCardHeight: 320 },
+  { minWidth: 1024, columns: 4, minCardHeight: 300, maxCardHeight: 380 },
+  { minWidth: 1440, columns: 4, minCardHeight: 340, maxCardHeight: 420 },
+  { minWidth: 1920, columns: 5, minCardHeight: 380, maxCardHeight: 480 },
+  { minWidth: 2560, columns: 6, minCardHeight: 420, maxCardHeight: 540 },
 ];
 
-const GAP = 16; // Tailwind gap-4
+const GAP = 24; // Tailwind gap-6 (Task 6 widened the grid gap to match)
 const HEADER_HEIGHT = 200; // Approximate header + search + tabs height
 const NOW_PLAYING_HEIGHT = 100; // Now playing bar
 const PADDING = 32; // Container padding
