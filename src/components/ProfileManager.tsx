@@ -14,6 +14,7 @@ export default function ProfileManager({ onClose }: ProfileManagerProps) {
   const {
     playlists,
     activeProfileId,
+    currentPlaylist,
     setActiveProfileId: setStoreActiveId,
     setCurrentPlaylist,
     setChannels,
@@ -78,6 +79,12 @@ export default function ProfileManager({ onClose }: ProfileManagerProps) {
         p.id === id ? { ...p, name: editName.trim() } : p
       );
       usePlayerStore.setState({ playlists: updatedPlaylists });
+
+      // currentPlaylist is a separate copy in the store, not derived from
+      // playlists — keep it in sync when renaming the active playlist
+      if (currentPlaylist?.id === id) {
+        setCurrentPlaylist({ ...currentPlaylist, name: editName.trim() });
+      }
 
       setEditingId(null);
       logger.info(`Profile ID ${id} renamed to: ${editName.trim()}`);
