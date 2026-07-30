@@ -269,21 +269,21 @@ export default function MainScreen() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen flex-col bg-bg">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="border-b border-border bg-surface p-6">
         <div className="mx-auto flex items-center justify-between px-2">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Better IPTV</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+          <h1 className="text-fluid-2xl font-bold text-text">Better IPTV</h1>
+          <div className="flex items-center gap-6">
+            <span className="text-fluid-sm text-text-muted">
               {channels.length} channels
             </span>
             <button
               onClick={() => setShowSettings(true)}
-              className="rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg p-3 transition-colors hover:bg-surface-hover"
               title="Settings"
             >
-              <SettingsIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <SettingsIcon className="h-6 w-6 text-text-muted" />
             </button>
           </div>
         </div>
@@ -306,10 +306,10 @@ export default function MainScreen() {
         role="tabpanel"
         aria-label="Channel list"
       >
-        <div className="mx-auto p-4">
+        <div className="mx-auto p-6">
           {filteredChannels.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-fluid-base text-text-muted">
                 {searchQuery ? 'No channels found' : 'No channels available'}
               </p>
             </div>
@@ -337,7 +337,7 @@ export default function MainScreen() {
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <div className={`grid ${getGridClasses(columns)} gap-4`}>
+                    <div className={`grid ${getGridClasses(columns)} gap-6`}>
                       {rowItems.map((channel) => {
                         const isChannelBlocked = blockedMap.get(channel.id!) ?? false;
 
