@@ -23,9 +23,12 @@ pub struct SeriesInfo {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Season {
+    #[serde(deserialize_with = "de_string_lenient")]
     pub id: String,
     pub name: String,
+    #[serde(deserialize_with = "de_string_lenient")]
     pub season_number: String,
+    #[serde(deserialize_with = "de_i32_lenient")]
     pub episode_count: i32,
     pub air_date: Option<String>,
     pub overview: Option<String>,
@@ -34,10 +37,13 @@ pub struct Season {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Episode {
+    #[serde(deserialize_with = "de_string_lenient")]
     pub id: String,
+    #[serde(deserialize_with = "de_i32_lenient")]
     pub episode_num: i32,
     pub title: String,
     pub container_extension: String,
+    #[serde(deserialize_with = "de_i32_lenient")]
     pub season: i32,
     pub info: EpisodeInfo,
 }
@@ -49,7 +55,63 @@ pub struct EpisodeInfo {
     #[serde(rename = "releaseDate")]
     pub release_date: Option<String>,
     pub duration: Option<String>,
+    #[serde(deserialize_with = "de_opt_f32_lenient", default)]
     pub rating: Option<f32>,
+}
+
+/// Some Xtream providers send string-typed IDs (e.g. `id`, `season_number`) as raw numbers.
+fn de_string_lenient<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match serde_json::Value::deserialize(deserializer)? {
+        serde_json::Value::String(s) => Ok(s),
+        serde_json::Value::Number(n) => Ok(n.to_string()),
+        other => Err(serde::de::Error::custom(format!(
+            "expected string or number, got {other}"
+        ))),
+    }
+}
+
+/// Some Xtream providers send numeric fields as strings (e.g. "5" instead of 5).
+fn de_i32_lenient<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match serde_json::Value::deserialize(deserializer)? {
+        serde_json::Value::Number(n) => n
+            .as_i64()
+            .map(|n| n as i32)
+            .ok_or_else(|| serde::de::Error::custom("invalid number")),
+        serde_json::Value::String(s) => {
+            s.trim().parse::<i32>().map_err(serde::de::Error::custom)
+        }
+        other => Err(serde::de::Error::custom(format!(
+            "expected number or string, got {other}"
+        ))),
+    }
+}
+
+/// Same string/number leniency as `de_i32_lenient`, but for an optional float field.
+fn de_opt_f32_lenient<'de, D>(deserializer: D) -> Result<Option<f32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Option::<serde_json::Value>::deserialize(deserializer)? {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Number(n)) => Ok(n.as_f64().map(|f| f as f32)),
+        Some(serde_json::Value::String(s)) => {
+            let s = s.trim();
+            if s.is_empty() {
+                Ok(None)
+            } else {
+                s.parse::<f32>().map(Some).map_err(serde::de::Error::custom)
+            }
+        }
+        Some(other) => Err(serde::de::Error::custom(format!(
+            "expected number, string, or null, got {other}"
+        ))),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,6 +128,57 @@ pub struct SeriesMetadata {
     pub backdrop_path: Option<Vec<String>>,
 }
 
+#[cfg(test)]
+mod lenient_number_tests {
+    use super::{Episode, Season};
+
+    #[test]
+    fn accepts_episode_num_and_season_as_string_or_number() {
+        let as_strings = r#"{"id":"1","episode_num":"3","title":"t","container_extension":"mp4","season":"2","info":{"plot":null,"movie_image":null,"releaseDate":null,"duration":null,"rating":"8.5"}}"#;
+        let ep: Episode = serde_json::from_str(as_strings).unwrap();
+        assert_eq!(ep.episode_num, 3);
+        assert_eq!(ep.season, 2);
+        assert_eq!(ep.info.rating, Some(8.5));
+
+        let as_numbers = r#"{"id":309556,"episode_num":3,"title":"t","container_extension":"mp4","season":2,"info":{"plot":null,"movie_image":null,"releaseDate":null,"duration":null,"rating":8.5}}"#;
+        let ep: Episode = serde_json::from_str(as_numbers).unwrap();
+        assert_eq!(ep.id, "309556");
+        assert_eq!(ep.episode_num, 3);
+        assert_eq!(ep.season, 2);
+        assert_eq!(ep.info.rating, Some(8.5));
+    }
+
+    #[test]
+    fn season_accepts_id_and_season_number_as_string_or_number() {
+        let as_numbers = r#"{"id":309556,"name":"Season 1","season_number":1,"episode_count":10,"air_date":null,"overview":null,"cover":null}"#;
+        let season: Season = serde_json::from_str(as_numbers).unwrap();
+        assert_eq!(season.id, "309556");
+        assert_eq!(season.season_number, "1");
+        assert_eq!(season.episode_count, 10);
+
+        let as_strings = r#"{"id":"309556","name":"Season 1","season_number":"1","episode_count":"10","air_date":null,"overview":null,"cover":null}"#;
+        let season: Season = serde_json::from_str(as_strings).unwrap();
+        assert_eq!(season.id, "309556");
+        assert_eq!(season.season_number, "1");
+        assert_eq!(season.episode_count, 10);
+    }
+
+    #[test]
+    fn rating_accepts_missing_null_and_empty_string() {
+        let missing = r#"{"id":"1","episode_num":1,"title":"t","container_extension":"mp4","season":1,"info":{"plot":null,"movie_image":null,"releaseDate":null,"duration":null}}"#;
+        assert_eq!(
+            serde_json::from_str::<Episode>(missing).unwrap().info.rating,
+            None
+        );
+
+        let empty = r#"{"id":"1","episode_num":1,"title":"t","container_extension":"mp4","season":1,"info":{"plot":null,"movie_image":null,"releaseDate":null,"duration":null,"rating":""}}"#;
+        assert_eq!(
+            serde_json::from_str::<Episode>(empty).unwrap().info.rating,
+            None
+        );
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct XtreamStream {
     #[allow(dead_code)] // May be used in future for stream ordering
@@ -73,6 +186,7 @@ struct XtreamStream {
     name: String,
     #[serde(alias = "series_id")]
     stream_id: i64,
+    #[serde(alias = "cover")]
     stream_icon: Option<String>,
     category_id: Option<String>,
     #[serde(rename = "type")]
@@ -83,6 +197,23 @@ struct XtreamStream {
 struct XtreamCategory {
     category_id: String,
     category_name: String,
+}
+
+#[cfg(test)]
+mod xtream_stream_tests {
+    use super::XtreamStream;
+
+    #[test]
+    fn accepts_cover_or_stream_icon_for_the_thumbnail_field() {
+        // get_series returns `cover`; get_live_streams/get_vod_streams return `stream_icon`
+        let series_style = r#"{"name":"s","series_id":1,"cover":"http://x/cover.png"}"#;
+        let stream: XtreamStream = serde_json::from_str(series_style).unwrap();
+        assert_eq!(stream.stream_icon.as_deref(), Some("http://x/cover.png"));
+
+        let live_style = r#"{"name":"s","stream_id":1,"stream_icon":"http://x/icon.png"}"#;
+        let stream: XtreamStream = serde_json::from_str(live_style).unwrap();
+        assert_eq!(stream.stream_icon.as_deref(), Some("http://x/icon.png"));
+    }
 }
 
 /// Progress information during channel fetching
@@ -217,8 +348,14 @@ async fn fetch_json_with_retry<T: for<'de> Deserialize<'de>>(
                 .json::<T>()
                 .await
                 .map_err(|e| {
-                    warn!("Failed to parse {} response, retrying: {}", action, e);
-                    backoff::Error::transient(anyhow::anyhow!("Parse failed: {}", e))
+                    let mut detail = e.to_string();
+                    let mut source = std::error::Error::source(&e);
+                    while let Some(s) = source {
+                        detail.push_str(&format!(": {}", s));
+                        source = s.source();
+                    }
+                    warn!("Failed to parse {} response, retrying: {}", action, detail);
+                    backoff::Error::transient(anyhow::anyhow!("Parse failed: {}", detail))
                 })
         }
     })
