@@ -45,9 +45,9 @@ export const ContentTypeTabs = memo(function ContentTypeTabs({
   onFilterChange,
 }: ContentTypeTabsProps) {
   return (
-    <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="border-b border-border bg-surface">
       <div className="mx-auto px-6">
-        <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Content type filter">
+        <div className="flex gap-3 overflow-x-auto" role="tablist" aria-label="Content type filter">
           {TABS.map((tab) => (
             <button
               key={tab.value}
@@ -55,10 +55,10 @@ export const ContentTypeTabs = memo(function ContentTypeTabs({
               aria-selected={activeFilter === tab.value}
               aria-controls="channel-list"
               onClick={() => onFilterChange(tab.value)}
-              className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-medium transition-colors ${
+              className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-5 py-4 text-fluid-base font-medium transition-colors ${
                 activeFilter === tab.value
-                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-text-muted hover:text-text'
               }`}
             >
               {tab.icon}
