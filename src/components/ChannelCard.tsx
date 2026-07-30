@@ -62,6 +62,7 @@ export const ChannelCard = memo(function ChannelCard({
               src={channel.logo}
               alt={channel.name}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           </div>
