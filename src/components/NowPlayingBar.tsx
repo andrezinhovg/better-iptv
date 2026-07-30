@@ -29,29 +29,29 @@ export const NowPlayingBar = memo(function NowPlayingBar({
   onStop,
 }: NowPlayingBarProps) {
   return (
-    <div className="bg-blue-600 p-4 text-white">
+    <div className="bg-accent p-6 text-white">
       <div className="mx-auto flex items-center justify-between px-2">
         <div className="flex items-center gap-4">
           {channel.logo && (
-            <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-900 p-1">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-black/20">
               <img
                 src={channel.logo}
                 alt={channel.name}
-                className="max-h-full max-w-full object-contain"
+                className="h-full w-full object-cover"
                 loading="lazy"
               />
             </div>
           )}
           <div>
-            <p className="font-medium">{channel.name}</p>
-            <p className="text-sm text-blue-100">{channel.group_name || 'Live TV'}</p>
+            <p className="text-fluid-lg font-medium">{channel.name}</p>
+            <p className="text-fluid-sm text-white/80">{channel.group_name || 'Live TV'}</p>
             {currentProgram && (
-              <p className="mt-1 text-sm text-blue-200">
+              <p className="mt-1 text-fluid-sm text-white/90">
                 <span className="font-medium">Now showing:</span> {currentProgram}
               </p>
             )}
             {nextProgram && (
-              <p className="mt-0.5 text-xs text-blue-200">
+              <p className="mt-0.5 text-fluid-xs text-white/70">
                 <span className="font-medium">Next up:</span> {nextProgram}
               </p>
             )}
@@ -59,10 +59,10 @@ export const NowPlayingBar = memo(function NowPlayingBar({
         </div>
         <button
           onClick={onStop}
-          className="rounded-lg bg-white/20 p-2 transition-colors hover:bg-white/30"
+          className="rounded-lg bg-white/20 p-3 transition-colors hover:bg-white/30"
           aria-label="Stop playback"
         >
-          <Square className="h-5 w-5" />
+          <Square className="h-6 w-6" />
         </button>
       </div>
     </div>
