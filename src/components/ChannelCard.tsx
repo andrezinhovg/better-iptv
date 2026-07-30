@@ -49,21 +49,21 @@ export const ChannelCard = memo(function ChannelCard({
 
   return (
     <div
-      className="relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+      className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-lg"
       style={{ height: `${cardHeight}px` }}
     >
       {/* Logo/Image section */}
-      <div className="group relative flex-shrink-0 bg-gray-900">
+      <div className="group relative flex-shrink-0 bg-bg">
         {channel.logo ? (
           <div
-            className="flex w-full items-center justify-center bg-gray-900 p-2"
+            className="flex w-full items-center justify-center bg-bg"
             style={{ height: `${imageHeight}px` }}
           >
             <img
               src={channel.logo}
               alt={channel.name}
               loading="lazy"
-              className="max-h-full max-w-full object-contain"
+              className="h-full w-full object-cover"
             />
           </div>
         ) : (
@@ -100,22 +100,20 @@ export const ChannelCard = memo(function ChannelCard({
       </div>
 
       {/* Content section */}
-      <div className={`${isLarge ? 'p-4' : isSmall ? 'p-2' : 'p-3'} flex min-h-0 flex-1 flex-col`}>
+      <div className={`${isLarge ? 'p-6' : isSmall ? 'p-3' : 'p-5'} flex min-h-0 flex-1 flex-col`}>
         <h3
-          className={`truncate font-medium text-gray-900 dark:text-white ${isLarge ? 'text-base' : 'text-sm'}`}
+          className={`truncate font-medium text-text ${isLarge ? 'text-fluid-lg' : 'text-fluid-base'}`}
         >
           {channel.name}
         </h3>
         {channel.group_name && (
-          <p
-            className={`mt-0.5 truncate text-gray-500 dark:text-gray-400 ${isSmall ? 'text-[10px]' : 'text-xs'}`}
-          >
+          <p className="mt-0.5 truncate text-fluid-sm text-text-muted">
             {channel.group_name}
           </p>
         )}
         {currentProgram && channel.content_type === 'live' && (
           <p
-            className={`mt-0.5 truncate text-blue-600 dark:text-blue-400 ${isSmall ? 'text-[10px]' : 'text-xs'}`}
+            className="mt-0.5 truncate text-fluid-sm text-accent"
             title={currentProgram}
           >
             📺 {currentProgram}
@@ -126,14 +124,14 @@ export const ChannelCard = memo(function ChannelCard({
         {/* Action button */}
         <button
           onClick={() => onPlay(channel)}
-          className={`flex w-full items-center justify-center gap-2 rounded-md font-medium transition-colors ${
-            isLarge ? 'mt-3 px-4 py-2.5' : isSmall ? 'mt-2 px-3 py-1.5 text-sm' : 'mt-2 px-4 py-2'
+          className={`flex w-full items-center justify-center gap-2 rounded-lg font-medium text-fluid-sm transition-colors ${
+            isLarge ? 'mt-4 px-5 py-3' : isSmall ? 'mt-3 px-4 py-2' : 'mt-3 px-5 py-2.5'
           } ${
             isPlaying
               ? 'bg-red-600 text-white hover:bg-red-700'
               : channel.content_type === 'series'
                 ? 'bg-purple-600 text-white hover:bg-purple-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-accent text-white hover:bg-accent-hover'
           }`}
         >
           {isPlaying ? (
