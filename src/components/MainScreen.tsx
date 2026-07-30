@@ -156,7 +156,7 @@ export default function MainScreen() {
     count: rowCount,
     getScrollElement: () => parentRef.current,
     estimateSize: () => estimatedRowHeight,
-    overscan: 3, // Render 3 extra rows above/below viewport
+    overscan: 2, // Render 2 extra rows above/below viewport (reduced from 3: cards are physically larger post-redesign, so the same row-count buffer now covers a bigger pixel/image area — most noticeable in 4K fullscreen with 6 columns)
   });
 
   const handlePlayChannel = useCallback(
@@ -335,6 +335,7 @@ export default function MainScreen() {
                       width: '100%',
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
+                      willChange: 'transform',
                     }}
                   >
                     <div className={`grid ${getGridClasses(columns)} gap-6`}>
