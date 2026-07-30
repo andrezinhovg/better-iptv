@@ -51,7 +51,7 @@ export const NowPlayingBar = memo(function NowPlayingBar({
               </p>
             )}
             {nextProgram && (
-              <p className="mt-0.5 text-fluid-xs text-white/70">
+              <p className="mt-0.5 text-fluid-xs text-white/90">
                 <span className="font-medium">Next up:</span> {nextProgram}
               </p>
             )}

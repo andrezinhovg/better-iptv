@@ -45,7 +45,6 @@ export const ChannelCard = memo(function ChannelCard({
 
   // Scale text and padding based on card height
   const isLarge = cardHeight > 280;
-  const isSmall = cardHeight < 220;
 
   return (
     <div
@@ -72,7 +71,7 @@ export const ChannelCard = memo(function ChannelCard({
             style={{ height: `${imageHeight}px` }}
           >
             <span
-              className={`font-bold text-white ${isLarge ? 'text-4xl' : isSmall ? 'text-2xl' : 'text-3xl'}`}
+              className={`font-bold text-white ${isLarge ? 'text-fluid-3xl' : 'text-fluid-2xl'}`}
             >
               {channel.name.charAt(0).toUpperCase()}
             </span>
@@ -92,7 +91,7 @@ export const ChannelCard = memo(function ChannelCard({
           }`}
         >
           <Star
-            className={`${isSmall ? 'h-3 w-3' : 'h-4 w-4'} ${
+            className={`h-4 w-4 ${
               channel.is_favorite ? 'fill-white text-white' : 'text-white'
             }`}
           />
@@ -100,7 +99,7 @@ export const ChannelCard = memo(function ChannelCard({
       </div>
 
       {/* Content section */}
-      <div className={`${isLarge ? 'p-6' : isSmall ? 'p-3' : 'p-5'} flex min-h-0 flex-1 flex-col`}>
+      <div className={`${isLarge ? 'p-6' : 'p-5'} flex min-h-0 flex-1 flex-col`}>
         <h3
           className={`truncate font-medium text-text ${isLarge ? 'text-fluid-lg' : 'text-fluid-base'}`}
         >
@@ -125,7 +124,7 @@ export const ChannelCard = memo(function ChannelCard({
         <button
           onClick={() => onPlay(channel)}
           className={`flex w-full items-center justify-center gap-2 rounded-lg font-medium text-fluid-sm transition-colors ${
-            isLarge ? 'mt-4 px-5 py-3' : isSmall ? 'mt-3 px-4 py-2' : 'mt-3 px-5 py-2.5'
+            isLarge ? 'mt-4 px-5 py-3' : 'mt-3 px-5 py-2.5'
           } ${
             isPlaying
               ? 'bg-red-600 text-white hover:bg-red-700'
@@ -136,17 +135,17 @@ export const ChannelCard = memo(function ChannelCard({
         >
           {isPlaying ? (
             <>
-              <Square className={`${isSmall ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <Square className="h-4 w-4" />
               Stop
             </>
           ) : channel.content_type === 'series' ? (
             <>
-              <Clapperboard className={`${isSmall ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <Clapperboard className="h-4 w-4" />
               Browse
             </>
           ) : (
             <>
-              <Play className={`${isSmall ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <Play className="h-4 w-4" />
               Play
             </>
           )}
