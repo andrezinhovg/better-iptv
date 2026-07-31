@@ -111,6 +111,7 @@ export default function SeriesView({
               <img
                 src={currentSeries.info.cover}
                 alt={currentSeries.info.name}
+                loading="lazy"
                 className="h-72 w-48 rounded-xl object-cover shadow-lg"
               />
             )}
@@ -212,6 +213,7 @@ function EpisodeCard({ episode, onPlay }: EpisodeCardProps) {
           <img
             src={episode.info.movie_image}
             alt={episode.title}
+            loading="lazy"
             className="h-56 w-full object-cover"
           />
         ) : (

@@ -24,7 +24,8 @@ pub async fn parse_m3u(source: &str, user_agent: Option<&str>) -> Result<Vec<Cha
             .context("Failed to read M3U content")?
     } else {
         // Read from file
-        std::fs::read_to_string(source)
+        tokio::fs::read_to_string(source)
+            .await
             .context("Failed to read M3U file")?
     };
 
