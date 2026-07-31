@@ -18,6 +18,12 @@ interface ChannelCardProps {
   parentalVisibility?: 'hide' | 'lock' | 'blur';
   /** Callback when favorite star is toggled */
   onToggleFavorite?: (channelId: number) => void;
+  /** Whether this card is the currently keyboard/D-pad focused card in the grid */
+  isFocused: boolean;
+  /** Ref callback so the grid can call .focus() on this card programmatically */
+  cardRef: (el: HTMLDivElement | null) => void;
+  /** Called when this card receives DOM focus (click or keyboard), to sync grid state */
+  onFocus: () => void;
 }
 
 /**
@@ -39,6 +45,9 @@ export const ChannelCard = memo(function ChannelCard({
   isBlocked = false,
   parentalVisibility = 'hide',
   onToggleFavorite,
+  isFocused,
+  cardRef,
+  onFocus,
 }: ChannelCardProps) {
   // Calculate dynamic image height (approximately 45% of card height)
   const imageHeight = Math.max(80, Math.round(cardHeight * 0.45));
@@ -48,7 +57,12 @@ export const ChannelCard = memo(function ChannelCard({
 
   return (
     <div
-      className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-lg"
+      ref={cardRef}
+      tabIndex={isFocused ? 0 : -1}
+      onFocus={onFocus}
+      className={`relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-lg ${
+        isFocused ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''
+      }`}
       style={{ height: `${cardHeight}px` }}
     >
       {/* Logo/Image section */}
@@ -80,6 +94,7 @@ export const ChannelCard = memo(function ChannelCard({
         )}
         <button
           type="button"
+          tabIndex={-1}
           aria-label={channel.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
           onClick={(e) => {
             e.stopPropagation();
@@ -123,6 +138,7 @@ export const ChannelCard = memo(function ChannelCard({
 
         {/* Action button */}
         <button
+          tabIndex={-1}
           onClick={() => onPlay(channel)}
           className={`flex w-full items-center justify-center gap-2 rounded-lg font-medium text-fluid-sm transition-colors ${
             isLarge ? 'mt-4 px-5 py-3' : 'mt-3 px-5 py-2.5'
