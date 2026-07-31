@@ -20,12 +20,15 @@ export function useGridKeyboardNav(
 ): GridKeyboardNav {
   const [focusedIndex, setFocusedIndex] = useState(0);
 
+  // Create a stable key from channel IDs to detect list changes
+  const channelKey = channels.map(c => c.id).join(',');
+
   // Reset focus whenever the filtered list changes (search/category/tab
   // switch) so the highlight never points at a channel that scrolled out
   // of the result set.
   useEffect(() => {
     setFocusedIndex(0);
-  }, [channels.length]);
+  }, [channelKey]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
