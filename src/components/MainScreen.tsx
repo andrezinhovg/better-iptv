@@ -22,6 +22,7 @@ import { useChannelPlayback } from '../hooks/useChannelPlayback';
 import { shouldBlockChannel } from '../lib/parentalControls';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useChannelFilter } from '../hooks/useChannelFilter';
+import { useGridKeyboardNav } from '../hooks/useGridKeyboardNav';
 
 export default function MainScreen() {
   // Channel data
@@ -191,6 +192,18 @@ export default function MainScreen() {
     ]
   );
 
+  const handleFocusedRowChange = useCallback(
+    (row: number) => rowVirtualizer.scrollToIndex(row),
+    [rowVirtualizer]
+  );
+
+  const { focusedIndex, setFocusedIndex, cardRefs, handleKeyDown } = useGridKeyboardNav(
+    filteredChannels,
+    columns,
+    handlePlayChannel,
+    handleFocusedRowChange
+  );
+
   const handlePlayEpisode = useCallback(
     async (
       episodeId: string,
@@ -301,6 +314,7 @@ export default function MainScreen() {
       {/* Channel List with Virtual Scrolling */}
       <div
         ref={parentRef}
+        onKeyDown={handleKeyDown}
         className="flex-1 overflow-y-auto"
         id="channel-list"
         role="tabpanel"
@@ -339,7 +353,8 @@ export default function MainScreen() {
                     }}
                   >
                     <div className={`grid ${getGridClasses(columns)} gap-6`}>
-                      {rowItems.map((channel) => {
+                      {rowItems.map((channel, colIdx) => {
+                        const channelIndex = startIndex + colIdx;
                         const isChannelBlocked = blockedMap.get(channel.id!) ?? false;
 
                         return (
@@ -353,6 +368,11 @@ export default function MainScreen() {
                             cardHeight={cardHeight}
                             isBlocked={isChannelBlocked}
                             parentalVisibility={parentalVisibility}
+                            isFocused={focusedIndex === channelIndex}
+                            cardRef={(el) => {
+                              cardRefs.current[channelIndex] = el;
+                            }}
+                            onFocus={() => setFocusedIndex(channelIndex)}
                           />
                         );
                       })}
