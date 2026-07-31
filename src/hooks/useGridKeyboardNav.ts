@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Channel } from '../types';
 
 interface GridKeyboardNav {
@@ -24,7 +24,7 @@ export function useGridKeyboardNav(
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Create a stable key from channel IDs to detect list changes
-  const channelKey = channels.map(c => c.id).join(',');
+  const channelKey = useMemo(() => channels.map(c => c.id).join(','), [channels]);
 
   // Reset focus whenever the filtered list changes (search/category/tab
   // switch) so the highlight never points at a channel that scrolled out
@@ -46,8 +46,8 @@ export function useGridKeyboardNav(
 
     // eslint-disable-next-line no-undef
     const raf = requestAnimationFrame(() => {
-      const gridHasFocus = cardRefs.current.includes(
-        document.activeElement as HTMLDivElement | null
+      const gridHasFocus = cardRefs.current.some(
+        (el) => el?.contains(document.activeElement)
       );
       if (gridHasFocus) {
         cardRefs.current[focusedIndex]?.focus();

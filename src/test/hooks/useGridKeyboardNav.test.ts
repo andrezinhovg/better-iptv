@@ -116,8 +116,12 @@ describe('useGridKeyboardNav', () => {
     vi.useFakeTimers();
     try {
       const { result } = renderHook(() => useGridKeyboardNav(makeChannels(6), 3, vi.fn()));
-      const fakeCard = { focus: vi.fn() } as unknown as HTMLDivElement;
-      result.current.cardRefs.current[0] = fakeCard;
+
+      // Use a real DOM element so .contains() works properly
+      const card = document.createElement('div');
+      document.body.appendChild(card);
+      const focusSpy = vi.spyOn(card, 'focus');
+      result.current.cardRefs.current[0] = card;
 
       // Simulate focus being outside the grid (e.g. on a search input, not in cardRefs)
       const outsideElement = document.createElement('input');
@@ -126,14 +130,57 @@ describe('useGridKeyboardNav', () => {
 
       act(() => result.current.setFocusedIndex(0));
 
-      // Advance timers to execute the requestAnimationFrame callback
-      act(() => vi.advanceTimersByTime(0));
+      // Advance timers to execute the requestAnimationFrame callback (RAF fires at ~16ms)
+      act(() => vi.advanceTimersByTime(16));
 
       // The focus method should NOT have been called because focus is outside the grid
-      expect(fakeCard.focus).not.toHaveBeenCalled();
+      expect(focusSpy).not.toHaveBeenCalled();
 
       // Cleanup
+      document.body.removeChild(card);
       document.body.removeChild(outsideElement);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls focus on the card when focus is on a descendant (e.g. clicked a button)', () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => useGridKeyboardNav(makeChannels(6), 3, vi.fn()));
+
+      // Create card 0 with a button inside (simulating a Play/Stop button)
+      const card0 = document.createElement('div');
+      const button = document.createElement('button');
+      card0.appendChild(button);
+      document.body.appendChild(card0);
+
+      // Create card 1 (empty)
+      const card1 = document.createElement('div');
+      document.body.appendChild(card1);
+
+      const card1FocusSpy = vi.spyOn(card1, 'focus');
+      result.current.cardRefs.current[0] = card0;
+      result.current.cardRefs.current[1] = card1;
+
+      // Simulate user clicking the button inside card 0
+      button.focus();
+      expect(document.activeElement).toBe(button);
+
+      // Move focus to card 1 (simulating arrow key navigation)
+      act(() => result.current.setFocusedIndex(1));
+
+      // Advance timers to execute the requestAnimationFrame callback
+      act(() => vi.advanceTimersByTime(16));
+
+      // The focus SHOULD have been called on card 1 because focus was already
+      // in the grid (on the button, which is a descendant of card 0).
+      // The guard gridHasFocus passes because card0.contains(button) = true.
+      expect(card1FocusSpy).toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(card0);
+      document.body.removeChild(card1);
     } finally {
       vi.useRealTimers();
     }
