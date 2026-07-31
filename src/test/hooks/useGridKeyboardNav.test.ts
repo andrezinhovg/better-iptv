@@ -95,4 +95,20 @@ describe('useGridKeyboardNav', () => {
     act(() => result.current.handleKeyDown(fakeKeyEvent('ArrowRight')));
     expect(result.current.focusedIndex).toBe(0);
   });
+
+  it('calls onFocusedRowChange with the row of the newly focused card', () => {
+    const onFocusedRowChange = vi.fn();
+    const { result } = renderHook(() =>
+      useGridKeyboardNav(makeChannels(6), 3, vi.fn(), onFocusedRowChange)
+    );
+    onFocusedRowChange.mockClear(); // drop the call from initial mount
+
+    act(() => result.current.setFocusedIndex(4)); // row 1 (4 / 3 = 1)
+    expect(onFocusedRowChange).toHaveBeenCalledWith(1);
+  });
+
+  it('exposes a cardRefs ref array', () => {
+    const { result } = renderHook(() => useGridKeyboardNav(makeChannels(6), 3, vi.fn()));
+    expect(result.current.cardRefs.current).toBeDefined();
+  });
 });

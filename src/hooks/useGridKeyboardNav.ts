@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Channel } from '../types';
 
 interface GridKeyboardNav {
   focusedIndex: number;
   setFocusedIndex: (index: number) => void;
+  cardRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   handleKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 }
 
@@ -16,9 +17,11 @@ interface GridKeyboardNav {
 export function useGridKeyboardNav(
   channels: Channel[],
   columns: number,
-  onPlay: (channel: Channel) => void
+  onPlay: (channel: Channel) => void,
+  onFocusedRowChange?: (row: number) => void
 ): GridKeyboardNav {
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Create a stable key from channel IDs to detect list changes
   const channelKey = channels.map(c => c.id).join(',');
@@ -29,6 +32,22 @@ export function useGridKeyboardNav(
   useEffect(() => {
     setFocusedIndex(0);
   }, [channelKey]);
+
+  // Keep DOM focus in sync with focusedIndex. The row containing the
+  // target card may not be mounted yet (virtualized), so scroll it into
+  // view first, then wait one paint before focusing — by then the
+  // virtualizer has had a chance to render the row.
+  useEffect(() => {
+    const row = Math.floor(focusedIndex / columns);
+    onFocusedRowChange?.(row);
+
+    // eslint-disable-next-line no-undef
+    const raf = requestAnimationFrame(() => {
+      cardRefs.current[focusedIndex]?.focus();
+    });
+    // eslint-disable-next-line no-undef
+    return () => cancelAnimationFrame(raf);
+  }, [focusedIndex, columns, onFocusedRowChange]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -70,5 +89,5 @@ export function useGridKeyboardNav(
     [channels, columns, focusedIndex, onPlay]
   );
 
-  return { focusedIndex, setFocusedIndex, handleKeyDown };
+  return { focusedIndex, setFocusedIndex, cardRefs, handleKeyDown };
 }
