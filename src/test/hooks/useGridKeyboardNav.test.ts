@@ -111,4 +111,31 @@ describe('useGridKeyboardNav', () => {
     const { result } = renderHook(() => useGridKeyboardNav(makeChannels(6), 3, vi.fn()));
     expect(result.current.cardRefs.current).toBeDefined();
   });
+
+  it('does not call focus on the card when focus is outside the grid (e.g. search bar)', () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => useGridKeyboardNav(makeChannels(6), 3, vi.fn()));
+      const fakeCard = { focus: vi.fn() } as unknown as HTMLDivElement;
+      result.current.cardRefs.current[0] = fakeCard;
+
+      // Simulate focus being outside the grid (e.g. on a search input, not in cardRefs)
+      const outsideElement = document.createElement('input');
+      document.body.appendChild(outsideElement);
+      outsideElement.focus();
+
+      act(() => result.current.setFocusedIndex(0));
+
+      // Advance timers to execute the requestAnimationFrame callback
+      act(() => vi.advanceTimersByTime(0));
+
+      // The focus method should NOT have been called because focus is outside the grid
+      expect(fakeCard.focus).not.toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(outsideElement);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

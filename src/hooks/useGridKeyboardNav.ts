@@ -37,13 +37,21 @@ export function useGridKeyboardNav(
   // target card may not be mounted yet (virtualized), so scroll it into
   // view first, then wait one paint before focusing — by then the
   // virtualizer has had a chance to render the row.
+  // Only focus the card if focus is already within the grid (e.g., user
+  // navigating via arrow keys or clicking a card); do not steal focus from
+  // elsewhere in the app (e.g., search input, settings button).
   useEffect(() => {
     const row = Math.floor(focusedIndex / columns);
     onFocusedRowChange?.(row);
 
     // eslint-disable-next-line no-undef
     const raf = requestAnimationFrame(() => {
-      cardRefs.current[focusedIndex]?.focus();
+      const gridHasFocus = cardRefs.current.includes(
+        document.activeElement as HTMLDivElement | null
+      );
+      if (gridHasFocus) {
+        cardRefs.current[focusedIndex]?.focus();
+      }
     });
     // eslint-disable-next-line no-undef
     return () => cancelAnimationFrame(raf);
