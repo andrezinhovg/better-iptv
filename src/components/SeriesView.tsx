@@ -29,7 +29,10 @@ export default function SeriesView({
   onBack,
   onPlayEpisode,
 }: SeriesViewProps) {
-  const { currentSeries, selectedSeason, setCurrentSeries, setSelectedSeason } = usePlayerStore();
+  const currentSeries = usePlayerStore((s) => s.currentSeries);
+  const selectedSeason = usePlayerStore((s) => s.selectedSeason);
+  const setCurrentSeries = usePlayerStore((s) => s.setCurrentSeries);
+  const setSelectedSeason = usePlayerStore((s) => s.setSelectedSeason);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -166,32 +169,29 @@ export default function SeriesView({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {selectedSeasonEpisodes.map((episode, index) => {
-                // Get all episodes from current to end of season (for playlist playback)
-                const remainingEpisodes = selectedSeasonEpisodes
-                  .slice(index) // Start from current episode
-                  .sort((a, b) => a.episode_num - b.episode_num) // Sort by episode number
-                  .map((ep) => ({
-                    id: ep.id,
-                    title: ep.title,
-                    extension: ep.container_extension,
-                  }));
-
-                return (
-                  <EpisodeCard
-                    key={episode.id}
-                    episode={episode}
-                    onPlay={() =>
-                      onPlayEpisode(
-                        episode.id,
-                        episode.container_extension,
-                        episode.title,
-                        remainingEpisodes
-                      )
-                    }
-                  />
-                );
-              })}
+              {selectedSeasonEpisodes.map((episode, index) => (
+                <EpisodeCard
+                  key={episode.id}
+                  episode={episode}
+                  onPlay={() =>
+                    // Remaining-episodes queue is only needed when the user
+                    // actually presses play, not on every render of every card.
+                    onPlayEpisode(
+                      episode.id,
+                      episode.container_extension,
+                      episode.title,
+                      selectedSeasonEpisodes
+                        .slice(index)
+                        .sort((a, b) => a.episode_num - b.episode_num)
+                        .map((ep) => ({
+                          id: ep.id,
+                          title: ep.title,
+                          extension: ep.container_extension,
+                        }))
+                    )
+                  }
+                />
+              ))}
             </div>
           )}
         </div>

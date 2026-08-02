@@ -23,15 +23,26 @@ export function useGridKeyboardNav(
   const [focusedIndex, setFocusedIndex] = useState(0);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Create a stable key from channel IDs to detect list changes
-  const channelKey = useMemo(() => channels.map(c => c.id).join(','), [channels]);
+  // Detect list content changes without allocating an id string every
+  // render — `channels` gets a new array identity on every filter/search
+  // update even when the contents are the same, so we diff by id instead
+  // of relying on reference equality, but short-circuit on first mismatch
+  // instead of building a full join() every time.
+  const prevChannelsRef = useRef<Channel[]>(channels);
+  const listChanged = useMemo(() => {
+    const prev = prevChannelsRef.current;
+    const changed =
+      prev.length !== channels.length || channels.some((c, i) => c.id !== prev[i].id);
+    prevChannelsRef.current = channels;
+    return changed;
+  }, [channels]);
 
   // Reset focus whenever the filtered list changes (search/category/tab
   // switch) so the highlight never points at a channel that scrolled out
   // of the result set.
   useEffect(() => {
-    setFocusedIndex(0);
-  }, [channelKey]);
+    if (listChanged) setFocusedIndex(0);
+  }, [listChanged]);
 
   // Keep DOM focus in sync with focusedIndex. The row containing the
   // target card may not be mounted yet (virtualized), so scroll it into

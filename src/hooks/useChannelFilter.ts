@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePlayerStore } from '../stores/player-store';
 import { shouldBlockChannel } from '../lib/parentalControls';
 import type { Channel } from '../types';
@@ -12,18 +12,18 @@ import type { Channel } from '../types';
  * 3. Parental controls (hide mode)
  * 4. Search query
  *
- * Syncs result to store via setFilteredChannels.
+ * Returns the memoized result directly instead of round-tripping through
+ * the store (effect -> setFilteredChannels -> re-render), which used to
+ * cost a second render on every filter change.
  */
 export function useChannelFilter(debouncedSearchQuery: string): Channel[] {
   const channels = usePlayerStore((s) => s.channels);
-  const filteredChannels = usePlayerStore((s) => s.filteredChannels);
   const liveChannels = usePlayerStore((s) => s.liveChannels);
   const vodChannels = usePlayerStore((s) => s.vodChannels);
   const seriesChannels = usePlayerStore((s) => s.seriesChannels);
   const favoriteChannels = usePlayerStore((s) => s.favoriteChannels);
   const contentTypeFilter = usePlayerStore((s) => s.contentTypeFilter);
   const categoryFilter = usePlayerStore((s) => s.categoryFilter);
-  const setFilteredChannels = usePlayerStore((s) => s.setFilteredChannels);
   const parentalEnabled = usePlayerStore((s) => s.parentalEnabled);
   const parentalUnlocked = usePlayerStore((s) => s.parentalUnlocked);
   const blockedChannelIds = usePlayerStore((s) => s.blockedChannelIds);
@@ -48,7 +48,7 @@ export function useChannelFilter(debouncedSearchQuery: string): Channel[] {
   }, [contentTypeFilter, liveChannels, vodChannels, seriesChannels, favoriteChannels, channels]);
 
   // Step 2-4: Apply category, parental, and search filters
-  useEffect(() => {
+  return useMemo(() => {
     let result = baseList;
 
     // Category filter
@@ -78,7 +78,7 @@ export function useChannelFilter(debouncedSearchQuery: string): Channel[] {
       );
     }
 
-    setFilteredChannels(result);
+    return result;
   }, [
     baseList,
     categoryFilter,
@@ -89,10 +89,7 @@ export function useChannelFilter(debouncedSearchQuery: string): Channel[] {
     blockedChannelIds,
     blockedCategories,
     parentalVisibility,
-    setFilteredChannels,
   ]);
-
-  return filteredChannels;
 }
 
 /**
