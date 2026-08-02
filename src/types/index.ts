@@ -101,3 +101,28 @@ export interface SeriesMetadata {
   rating?: string;
   backdrop_path?: string[];
 }
+
+export interface WatchProgress {
+  channel_id: number;
+  content_type: 'live' | 'vod' | 'series';
+  episode_id?: string;
+  episode_extension?: string;
+  season_number?: number;
+  episode_num?: number;
+  episode_title?: string;
+  watched_at: string;
+}
+
+export interface ContinueWatchingEntry {
+  channel_id: number;
+  name: string;
+  logo?: string;
+  url: string;
+  content_type: 'live' | 'vod' | 'series';
+  episode_id?: string;
+  episode_extension?: string;
+  season_number?: number;
+  episode_num?: number;
+  episode_title?: string;
+  watched_at: string;
+}

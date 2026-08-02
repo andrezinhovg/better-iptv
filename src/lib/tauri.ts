@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Channel, Playlist, SeriesInfo, MergeResult } from '../types';
+import type { Channel, Playlist, SeriesInfo, MergeResult, WatchProgress, ContinueWatchingEntry } from '../types';
 
 // ========== MPV Commands ==========
 
@@ -102,14 +102,33 @@ export async function playEpisodeWithSeason(
   serverUrl: string,
   username: string,
   password: string,
+  channelId: number,
+  seasonNumber: number,
+  episodeNum: number,
   episodes: PlaylistEpisode[]
 ): Promise<void> {
   return await invoke('play_episode_with_season', {
     serverUrl,
     username,
     password,
+    channelId,
+    seasonNumber,
+    episodeNum,
     episodes,
   });
+}
+
+// ========== Watch Progress Commands ==========
+
+export async function getWatchProgress(channelId: number): Promise<WatchProgress | null> {
+  return await invoke('get_watch_progress', { channelId });
+}
+
+export async function getContinueWatching(
+  playlistId: number,
+  limit: number
+): Promise<ContinueWatchingEntry[]> {
+  return await invoke('get_continue_watching', { playlistId, limit });
 }
 
 // ========== Settings Commands ==========
