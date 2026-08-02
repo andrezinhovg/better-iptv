@@ -197,6 +197,71 @@ pub fn get_channel_groups(
     }
 }
 
+// ========== Watch Progress Queries ==========
+
+const WATCH_PROGRESS_SELECT_COLUMNS: &str =
+    "channel_id, content_type, episode_id, episode_extension, season_number, episode_num, episode_title, watched_at";
+
+fn map_watch_progress_row(row: &Row) -> rusqlite::Result<WatchProgress> {
+    Ok(WatchProgress {
+        channel_id: row.get(0)?,
+        content_type: row.get(1)?,
+        episode_id: row.get(2)?,
+        episode_extension: row.get(3)?,
+        season_number: row.get(4)?,
+        episode_num: row.get(5)?,
+        episode_title: row.get(6)?,
+        watched_at: row.get(7)?,
+    })
+}
+
+/// Get the last episode/item opened for a channel, if any.
+pub fn get_watch_progress(conn: &Connection, channel_id: i64) -> Result<Option<WatchProgress>> {
+    let sql = format!(
+        "SELECT {} FROM watch_progress WHERE channel_id = ?1",
+        WATCH_PROGRESS_SELECT_COLUMNS
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let mut rows = stmt.query_map(params![channel_id], map_watch_progress_row)?;
+    rows.next().transpose()
+}
+
+/// Get the most recently opened items for a playlist, for the
+/// "Continue Watching" row. Ordered most-recent-first.
+pub fn get_continue_watching(
+    conn: &Connection,
+    playlist_id: i64,
+    limit: i64,
+) -> Result<Vec<ContinueWatchingEntry>> {
+    let sql = "SELECT wp.channel_id, c.name, c.logo, c.url, wp.content_type,
+                      wp.episode_id, wp.episode_extension, wp.season_number,
+                      wp.episode_num, wp.episode_title, wp.watched_at
+               FROM watch_progress wp
+               JOIN channels c ON c.id = wp.channel_id
+               WHERE c.playlist_id = ?1
+               ORDER BY wp.watched_at DESC
+               LIMIT ?2";
+    let mut stmt = conn.prepare(sql)?;
+    let entries = stmt
+        .query_map(params![playlist_id, limit], |row| {
+            Ok(ContinueWatchingEntry {
+                channel_id: row.get(0)?,
+                name: row.get(1)?,
+                logo: row.get(2)?,
+                url: row.get(3)?,
+                content_type: row.get(4)?,
+                episode_id: row.get(5)?,
+                episode_extension: row.get(6)?,
+                season_number: row.get(7)?,
+                episode_num: row.get(8)?,
+                episode_title: row.get(9)?,
+                watched_at: row.get(10)?,
+            })
+        })?
+        .collect::<Result<Vec<_>>>()?;
+    Ok(entries)
+}
+
 // ========== Tests ==========
 
 #[cfg(test)]
@@ -375,5 +440,176 @@ mod tests {
         let vod_groups = get_channel_groups(&conn, playlist_id, Some("vod")).unwrap();
         assert_eq!(vod_groups.len(), 1);
         assert_eq!(vod_groups[0], "VOD Group");
+    }
+
+    // ========== Watch Progress Tests ==========
+
+    fn insert_watch_progress_row(
+        conn: &Connection,
+        channel_id: i64,
+        content_type: &str,
+        episode_id: Option<&str>,
+        episode_extension: Option<&str>,
+        season_number: Option<i32>,
+        episode_num: Option<i32>,
+        episode_title: Option<&str>,
+        watched_at: &str,
+    ) {
+        conn.execute(
+            "INSERT INTO watch_progress
+             (channel_id, content_type, episode_id, episode_extension, season_number, episode_num, episode_title, watched_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                channel_id,
+                content_type,
+                episode_id,
+                episode_extension,
+                season_number,
+                episode_num,
+                episode_title,
+                watched_at
+            ],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_get_watch_progress_none_when_never_watched() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel_id = create_test_channel(&conn, playlist_id, "C");
+
+        let result = get_watch_progress(&conn, channel_id).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_get_watch_progress_returns_series_pointer() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel_id = create_test_channel(&conn, playlist_id, "Series C");
+
+        insert_watch_progress_row(
+            &conn,
+            channel_id,
+            "series",
+            Some("ep-42"),
+            Some("mkv"),
+            Some(2),
+            Some(5),
+            Some("The Return"),
+            "2026-08-01 10:00:00",
+        );
+
+        let result = get_watch_progress(&conn, channel_id).unwrap().unwrap();
+        assert_eq!(result.channel_id, channel_id);
+        assert_eq!(result.content_type, "series");
+        assert_eq!(result.episode_id.as_deref(), Some("ep-42"));
+        assert_eq!(result.episode_extension.as_deref(), Some("mkv"));
+        assert_eq!(result.season_number, Some(2));
+        assert_eq!(result.episode_num, Some(5));
+        assert_eq!(result.episode_title.as_deref(), Some("The Return"));
+    }
+
+    #[test]
+    fn test_get_continue_watching_empty_when_nothing_watched() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+
+        let result = get_continue_watching(&conn, playlist_id, 20).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_get_continue_watching_orders_most_recent_first() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let older_channel = create_test_channel(&conn, playlist_id, "Older");
+        let newer_channel = create_test_channel(&conn, playlist_id, "Newer");
+
+        insert_watch_progress_row(
+            &conn, older_channel, "vod", None, None, None, None, None,
+            "2020-01-01 00:00:00",
+        );
+        insert_watch_progress_row(
+            &conn, newer_channel, "vod", None, None, None, None, None,
+            "2026-08-01 00:00:00",
+        );
+
+        let result = get_continue_watching(&conn, playlist_id, 20).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].channel_id, newer_channel);
+        assert_eq!(result[1].channel_id, older_channel);
+    }
+
+    #[test]
+    fn test_get_continue_watching_respects_limit() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        for i in 0..3 {
+            let channel_id = create_test_channel(&conn, playlist_id, &format!("C{}", i));
+            insert_watch_progress_row(
+                &conn, channel_id, "vod", None, None, None, None, None,
+                "2026-08-01 00:00:00",
+            );
+        }
+
+        let result = get_continue_watching(&conn, playlist_id, 2).unwrap();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_get_continue_watching_scoped_to_playlist() {
+        let conn = setup_test_db();
+        let playlist_a = create_test_playlist(&conn, "A");
+        let playlist_b = create_test_playlist(&conn, "B");
+        let channel_a = create_test_channel(&conn, playlist_a, "In A");
+        let channel_b = create_test_channel(&conn, playlist_b, "In B");
+
+        insert_watch_progress_row(
+            &conn, channel_a, "vod", None, None, None, None, None,
+            "2026-08-01 00:00:00",
+        );
+        insert_watch_progress_row(
+            &conn, channel_b, "vod", None, None, None, None, None,
+            "2026-08-01 00:00:00",
+        );
+
+        let result = get_continue_watching(&conn, playlist_a, 20).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].channel_id, channel_a);
+    }
+
+    #[test]
+    fn test_get_continue_watching_includes_channel_display_fields() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel = Channel {
+            id: None,
+            playlist_id,
+            name: "My Movie".to_string(),
+            url: "http://example.com/movie.mkv".to_string(),
+            logo: Some("http://example.com/poster.jpg".to_string()),
+            group_name: None,
+            epg_id: None,
+            tvg_name: None,
+            content_type: "vod".to_string(),
+            is_favorite: false,
+            sort_order: 0,
+            category_order: 0,
+            created_at: None,
+        };
+        let channel_id = create_channel(&conn, &channel).unwrap();
+
+        insert_watch_progress_row(
+            &conn, channel_id, "vod", None, None, None, None, None,
+            "2026-08-01 00:00:00",
+        );
+
+        let result = get_continue_watching(&conn, playlist_id, 20).unwrap();
+        assert_eq!(result[0].name, "My Movie");
+        assert_eq!(result[0].url, "http://example.com/movie.mkv");
+        assert_eq!(result[0].logo.as_deref(), Some("http://example.com/poster.jpg"));
+        assert_eq!(result[0].content_type, "vod");
     }
 }

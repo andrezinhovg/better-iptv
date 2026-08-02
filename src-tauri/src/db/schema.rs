@@ -102,22 +102,32 @@ pub fn init_schema(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Watch History table
+    // watch_history was schema-only dead code (never inserted or read
+    // anywhere in the codebase) — safe to drop and replace.
+    conn.execute("DROP TABLE IF EXISTS watch_history", [])?;
+
+    // Watch Progress table: one upserted row per channel/movie/series,
+    // tracking only the last episode/item opened (not a history log,
+    // not a per-second position).
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS watch_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            channel_id INTEGER NOT NULL,
-            watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            duration_seconds INTEGER DEFAULT 0,
+        "CREATE TABLE IF NOT EXISTS watch_progress (
+            channel_id INTEGER PRIMARY KEY,
+            content_type TEXT NOT NULL,
+            episode_id TEXT,
+            episode_extension TEXT,
+            season_number INTEGER,
+            episode_num INTEGER,
+            episode_title TEXT,
+            watched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
         )",
         [],
     )?;
 
-    // Index for watch history lookups by channel
+    // Index for continue-watching row ordering
     conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_watch_history_channel_id
-         ON watch_history(channel_id)",
+        "CREATE INDEX IF NOT EXISTS idx_watch_progress_watched_at
+         ON watch_progress(watched_at DESC)",
         [],
     )?;
 

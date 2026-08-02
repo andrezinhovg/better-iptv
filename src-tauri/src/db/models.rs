@@ -38,3 +38,34 @@ pub struct MergeResult {
     pub removed: usize,
     pub total: usize,
 }
+
+/// Last episode/item opened for a given channel (series, movie, or live
+/// channel). One row per channel_id — not a history log.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchProgress {
+    pub channel_id: i64,
+    pub content_type: String,
+    pub episode_id: Option<String>,
+    pub episode_extension: Option<String>,
+    pub season_number: Option<i32>,
+    pub episode_num: Option<i32>,
+    pub episode_title: Option<String>,
+    pub watched_at: String,
+}
+
+/// A watch_progress row joined with its channel's display fields, for the
+/// "Continue Watching" row.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContinueWatchingEntry {
+    pub channel_id: i64,
+    pub name: String,
+    pub logo: Option<String>,
+    pub url: String,
+    pub content_type: String,
+    pub episode_id: Option<String>,
+    pub episode_extension: Option<String>,
+    pub season_number: Option<i32>,
+    pub episode_num: Option<i32>,
+    pub episode_title: Option<String>,
+    pub watched_at: String,
+}
