@@ -52,6 +52,7 @@ CREATE TABLE watch_progress (
     channel_id INTEGER PRIMARY KEY,   -- 1 linha por canal/filme/série, upsert
     content_type TEXT NOT NULL,       -- 'live' | 'vod' | 'series'
     episode_id TEXT,                  -- só séries (id do episódio na Xtream)
+    episode_extension TEXT,           -- só séries (container_extension, pra montar a URL sem depender da lista fresca da API)
     season_number INTEGER,            -- só séries
     episode_num INTEGER,              -- só séries
     episode_title TEXT,               -- só séries, para exibir "T2 E5 — Título"
@@ -70,28 +71,36 @@ Ao apagar/trocar uma playlist, o `ON DELETE CASCADE` de `channels` já limpa o
 ## Backend
 
 Novas funções em `db/queries.rs` / `db/mutations.rs`:
-- `upsert_watch_progress(conn, channel_id, content_type, episode: Option<EpisodeProgress>)`
-- `get_continue_watching(conn, playlist_id, limit) -> Vec<WatchProgressEntry>`
+- `upsert_watch_progress(conn, channel_id, content_type, episode_id, episode_extension, season_number, episode_num, episode_title)`
+- `get_continue_watching(conn, playlist_id, limit) -> Vec<ContinueWatchingEntry>`
   — join com `channels` pra nome/logo/url, `ORDER BY watched_at DESC LIMIT ?`
-- `get_watch_progress(conn, channel_id) -> Option<WatchProgressEntry>`
-- `clear_watch_progress(conn, channel_id)`
+- `get_watch_progress(conn, channel_id) -> Option<WatchProgress>`
 
-Novos comandos Tauri (`commands/watch_progress.rs`):
-- `record_watch_progress`
+Novos comandos Tauri, só leitura (`commands/watch_progress.rs`):
 - `get_continue_watching`
-- `get_series_watch_progress`
-- `clear_watch_progress`
+- `get_watch_progress`
 
-Pontos de gravação:
+**Gravação é sempre feita no backend, dentro do próprio comando de play** —
+não existe um comando `record_watch_progress` separado chamado pelo
+frontend. Isso evita um round-trip IPC a mais e garante que o ponteiro nunca
+fica dessincronizado da reprodução real (não tem como gravar progresso sem
+o MPV de fato ter sido iniciado com sucesso):
 - `play_channel` (live/vod): depois que `playback::play_channel` retorna
   sucesso, upsert com `content_type` do canal, sem campos de episódio.
 - `play_episode_with_season` (séries): hoje recebe só
-  `episodes: Vec<PlaylistEpisode>`, sem o `channel_id` da série. Precisa
-  ganhar um parâmetro `channel_id: i64` (o frontend já tem esse valor em
-  `selectedSeries.id` dentro de `MainScreen.tsx`, só falta passar adiante por
-  `SeriesView` → `onPlayEpisode` → `playEpisode`). Depois de tocar com
-  sucesso, upsert com os dados do primeiro episódio da fila (o que
-  efetivamente começa a tocar).
+  `episodes: Vec<PlaylistEpisode>`, sem `channel_id`/temporada/episódio.
+  Precisa ganhar três parâmetros novos: `channel_id: i64`,
+  `season_number: i32`, `episode_num: i32` (os dois últimos referem-se ao
+  primeiro episódio da fila — o que efetivamente começa a tocar). O
+  `channel_id` já existe no frontend como `selectedSeries.id` dentro de
+  `MainScreen.tsx`, só falta passar adiante por `SeriesView` →
+  `onPlayEpisode` → `playEpisode`. Depois de tocar com sucesso, upsert com
+  os dados do primeiro episódio da fila.
+
+**Sem comando de "limpar progresso"**: "Começar do zero" apenas toca o
+episódio 1 normalmente — como toda reprodução grava/atualiza o ponteiro
+automaticamente, isso já sobrescreve o progresso antigo com T1E1, sem
+precisar de um comando de limpeza dedicado.
 
 **Correção de um gap encontrado no fluxo atual**: `useChannelPlayback.playEpisode`
 tem hoje dois caminhos — um chama `play_episode_with_season` quando há uma
@@ -121,9 +130,9 @@ fila de 1 episódio. Resultado: um único caminho de reprodução de série, um
     `EpisodeCard` já usa hoje: fatia a temporada a partir do índice do
     episódio e ordena por `episode_num`).
   - **Começar do zero**: chama `onPlayEpisode` com o primeiro episódio da
-    primeira temporada, e chama `clearWatchProgress(seriesChannelId)` — sem
-    isso, a próxima vez que a série abrisse ainda ofereceria o ponteiro
-    antigo, o que confundiria quem acabou de escolher recomeçar.
+    primeira temporada. Como toda reprodução grava o ponteiro
+    automaticamente no backend, isso já sobrescreve o progresso salvo com
+    T1E1 — não precisa de uma chamada de limpeza separada.
   - Se o `episode_id` salvo não existir mais na lista atual de episódios
     (removido pelo provedor), "Continuar" ainda funciona: a URL é montada
     diretamente a partir do `episode_id`/`extension` salvos, sem depender de
