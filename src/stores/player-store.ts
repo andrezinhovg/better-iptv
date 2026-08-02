@@ -166,7 +166,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   // Content Type Filter
-  contentTypeFilter: 'live',
+  contentTypeFilter: 'all',
   setContentTypeFilter: (filter) => set({ contentTypeFilter: filter, categoryFilter: null }),
 
   // Category Filter
