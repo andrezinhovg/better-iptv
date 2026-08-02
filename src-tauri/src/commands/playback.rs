@@ -2,7 +2,7 @@ use crate::db::{queries, mutations, models::Channel};
 use crate::error::AppError;
 use crate::playback;
 use crate::state::AppState;
-use log::info;
+use log::{info, warn};
 use tauri::State;
 
 #[tauri::command]
@@ -42,7 +42,11 @@ pub async fn play_channel(state: State<'_, AppState>, channel: Channel) -> Resul
 
     if let Some(channel_id) = channel.id {
         let conn = state.pool.get()?;
-        mutations::upsert_watch_progress(&conn, channel_id, &channel.content_type, None, None, None, None, None)?;
+        if let Err(e) =
+            mutations::upsert_watch_progress(&conn, channel_id, &channel.content_type, None, None, None, None, None)
+        {
+            warn!("Failed to record watch progress: {}", e);
+        }
     }
 
     info!("Playing channel: {} ({})", channel.name, channel.content_type);

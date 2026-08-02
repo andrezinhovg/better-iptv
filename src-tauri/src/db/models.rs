@@ -60,7 +60,6 @@ pub struct ContinueWatchingEntry {
     pub channel_id: i64,
     pub name: String,
     pub logo: Option<String>,
-    pub url: String,
     pub content_type: String,
     pub episode_id: Option<String>,
     pub episode_extension: Option<String>,

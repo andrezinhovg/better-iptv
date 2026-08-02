@@ -21,7 +21,7 @@ interface SeriesViewProps {
     seasonNumber: number,
     episodeNum: number,
     remainingEpisodes?: Array<{ id: string; title: string; extension: string }>
-  ) => void;
+  ) => Promise<void>;
 }
 
 export default function SeriesView({
@@ -73,6 +73,28 @@ export default function SeriesView({
     };
   }, [seriesId, channelId, serverUrl, username, password, setCurrentSeries, setSelectedSeason]);
 
+  // Wraps onPlayEpisode so the resume banner reflects whatever was just
+  // played, instead of the progress fetched on mount.
+  const playEpisodeAndRefresh = useCallback(
+    async (
+      episodeId: string,
+      extension: string,
+      title: string,
+      seasonNumber: number,
+      episodeNum: number,
+      remainingEpisodes?: Array<{ id: string; title: string; extension: string }>
+    ) => {
+      await onPlayEpisode(episodeId, extension, title, seasonNumber, episodeNum, remainingEpisodes);
+      try {
+        const refreshedProgress = await getWatchProgress(channelId);
+        setWatchProgress(refreshedProgress);
+      } catch (err) {
+        logger.error('Failed to refresh watch progress:', err);
+      }
+    },
+    [onPlayEpisode, channelId]
+  );
+
   const handleContinue = useCallback(() => {
     if (!watchProgress?.episode_id || !currentSeries) return;
 
@@ -90,7 +112,7 @@ export default function SeriesView({
             },
           ];
 
-    onPlayEpisode(
+    playEpisodeAndRefresh(
       watchProgress.episode_id,
       watchProgress.episode_extension ?? '',
       watchProgress.episode_title ?? '',
@@ -98,7 +120,7 @@ export default function SeriesView({
       watchProgress.episode_num ?? 1,
       queue
     );
-  }, [watchProgress, currentSeries, onPlayEpisode]);
+  }, [watchProgress, currentSeries, playEpisodeAndRefresh]);
 
   const handleRestart = useCallback(() => {
     if (!currentSeries || currentSeries.seasons.length === 0) return;
@@ -111,7 +133,7 @@ export default function SeriesView({
     if (!firstEpisode) return;
 
     const queue = getRemainingEpisodes(seasonEpisodes, firstEpisode.id);
-    onPlayEpisode(
+    playEpisodeAndRefresh(
       firstEpisode.id,
       firstEpisode.container_extension,
       firstEpisode.title,
@@ -119,7 +141,7 @@ export default function SeriesView({
       firstEpisode.episode_num,
       queue
     );
-  }, [currentSeries, onPlayEpisode]);
+  }, [currentSeries, playEpisodeAndRefresh]);
 
   if (isLoading) {
     return (
@@ -197,7 +219,7 @@ export default function SeriesView({
       </div>
 
       {/* Resume banner */}
-      {watchProgress && (
+      {watchProgress?.episode_id && (
         <div className="border-b border-border bg-surface-hover">
           <div className="mx-auto flex flex-wrap items-center justify-between gap-4 px-6 py-4">
             <p className="text-fluid-sm text-text">
@@ -261,11 +283,17 @@ export default function SeriesView({
                   onPlay={() =>
                     // Remaining-episodes queue is only needed when the user
                     // actually presses play, not on every render of every card.
-                    onPlayEpisode(
+                    // Use selectedSeason (not episode.season) as the season
+                    // number: it's the same key used to index
+                    // currentSeries.episodes[...] for resuming later, so it
+                    // must match even if the provider numbers episode.season
+                    // inconsistently (e.g. specials as season 0).
+                    selectedSeason != null &&
+                    playEpisodeAndRefresh(
                       episode.id,
                       episode.container_extension,
                       episode.title,
-                      episode.season,
+                      Number(selectedSeason),
                       episode.episode_num,
                       getRemainingEpisodes(selectedSeasonEpisodes, episode.id)
                     )

@@ -4,7 +4,7 @@ use crate::error::AppError;
 use crate::playlist::{fetch_series_info, SeriesInfo, XtreamCredentials};
 use crate::series_domain::{self, PlaylistEpisode};
 use crate::state::AppState;
-use log::info;
+use log::{info, warn};
 use tauri::State;
 
 fn get_language_settings(
@@ -96,7 +96,7 @@ pub async fn play_episode_with_season(
 
     {
         let conn = state.pool.get()?;
-        mutations::upsert_watch_progress(
+        if let Err(e) = mutations::upsert_watch_progress(
             &conn,
             channel_id,
             "series",
@@ -105,7 +105,9 @@ pub async fn play_episode_with_season(
             Some(season_number),
             Some(episode_num),
             Some(first_title),
-        )?;
+        ) {
+            warn!("Failed to record watch progress: {}", e);
+        }
     }
 
     info!("Playing series episode: {}", first_title);

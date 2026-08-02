@@ -233,7 +233,7 @@ pub fn get_continue_watching(
     playlist_id: i64,
     limit: i64,
 ) -> Result<Vec<ContinueWatchingEntry>> {
-    let sql = "SELECT wp.channel_id, c.name, c.logo, c.url, wp.content_type,
+    let sql = "SELECT wp.channel_id, c.name, c.logo, wp.content_type,
                       wp.episode_id, wp.episode_extension, wp.season_number,
                       wp.episode_num, wp.episode_title, wp.watched_at
                FROM watch_progress wp
@@ -248,14 +248,13 @@ pub fn get_continue_watching(
                 channel_id: row.get(0)?,
                 name: row.get(1)?,
                 logo: row.get(2)?,
-                url: row.get(3)?,
-                content_type: row.get(4)?,
-                episode_id: row.get(5)?,
-                episode_extension: row.get(6)?,
-                season_number: row.get(7)?,
-                episode_num: row.get(8)?,
-                episode_title: row.get(9)?,
-                watched_at: row.get(10)?,
+                content_type: row.get(3)?,
+                episode_id: row.get(4)?,
+                episode_extension: row.get(5)?,
+                season_number: row.get(6)?,
+                episode_num: row.get(7)?,
+                episode_title: row.get(8)?,
+                watched_at: row.get(9)?,
             })
         })?
         .collect::<Result<Vec<_>>>()?;
@@ -608,7 +607,6 @@ mod tests {
 
         let result = get_continue_watching(&conn, playlist_id, 20).unwrap();
         assert_eq!(result[0].name, "My Movie");
-        assert_eq!(result[0].url, "http://example.com/movie.mkv");
         assert_eq!(result[0].logo.as_deref(), Some("http://example.com/poster.jpg"));
         assert_eq!(result[0].content_type, "vod");
     }

@@ -117,7 +117,6 @@ export interface ContinueWatchingEntry {
   channel_id: number;
   name: string;
   logo?: string;
-  url: string;
   content_type: 'live' | 'vod' | 'series';
   episode_id?: string;
   episode_extension?: string;

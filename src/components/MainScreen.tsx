@@ -159,6 +159,44 @@ export default function MainScreen() {
     blockedCategories,
   ]);
 
+  // Lookup for Continue Watching parental filtering (avoids O(entries * channels) scans)
+  const channelsById = useMemo(() => {
+    const map = new Map<number, Channel>();
+    for (const channel of channels) {
+      if (channel.id) map.set(channel.id, channel);
+    }
+    return map;
+  }, [channels]);
+
+  // Continue Watching entries, filtered against the same parental "hide" predicate
+  // the main grid uses (see useChannelFilter.ts), so blocked content doesn't sneak
+  // in via the row.
+  const visibleContinueWatching = useMemo(() => {
+    if (!(parentalEnabled && !parentalUnlocked && parentalVisibility === 'hide')) {
+      return continueWatching;
+    }
+    return continueWatching.filter((entry) => {
+      const channel = channelsById.get(entry.channel_id);
+      if (!channel) return false;
+      return !shouldBlockChannel(channel, {
+        enabled: parentalEnabled,
+        autoDetect: parentalAutoDetect,
+        blockedIds: blockedChannelIds,
+        blockedCategories: blockedCategories,
+        unlocked: parentalUnlocked,
+      });
+    });
+  }, [
+    continueWatching,
+    channelsById,
+    parentalEnabled,
+    parentalUnlocked,
+    parentalAutoDetect,
+    blockedChannelIds,
+    blockedCategories,
+    parentalVisibility,
+  ]);
+
   // Virtual scrolling setup - virtualize by rows (dynamic items per row)
   const rowCount = Math.ceil(filteredChannels.length / columns);
 
@@ -204,13 +242,7 @@ export default function MainScreen() {
   const handleSelectContinueWatching = useCallback(
     (channelId: number) => {
       const channel = channels.find((c) => c.id === channelId);
-      if (!channel) return;
-
-      if (channel.content_type === 'series') {
-        setSelectedSeries(channel);
-      } else {
-        handlePlayChannel(channel);
-      }
+      if (channel) handlePlayChannel(channel);
     },
     [channels, handlePlayChannel]
   );
@@ -345,7 +377,10 @@ export default function MainScreen() {
 
       {/* Continue Watching */}
       {contentTypeFilter === 'all' && (
-        <ContinueWatchingRow entries={continueWatching} onSelect={handleSelectContinueWatching} />
+        <ContinueWatchingRow
+          entries={visibleContinueWatching}
+          onSelect={handleSelectContinueWatching}
+        />
       )}
 
       {/* Category Bar - horizontal scrollable chips */}
@@ -479,6 +514,7 @@ export default function MainScreen() {
               try {
                 const freshChannels = await getChannels(currentPlaylist.id);
                 setChannels(freshChannels);
+                loadContinueWatching(currentPlaylist.id);
               } catch (err) {
                 logger.error('Failed to reload channels after refresh:', err);
               }
