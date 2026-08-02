@@ -1,4 +1,4 @@
-use crate::db::{queries, models::Channel};
+use crate::db::{queries, mutations, models::Channel};
 use crate::error::AppError;
 use crate::playback;
 use crate::state::AppState;
@@ -28,15 +28,22 @@ pub async fn play_channel(state: State<'_, AppState>, channel: Channel) -> Resul
         (audio, subtitle)
     };
 
-    let mut player = state.mpv_player.lock().await;
-    playback::play_channel(
-        &mut player,
-        &state.current_channel,
-        &channel,
-        audio_lang.as_deref(),
-        subtitle_lang.as_deref(),
-    )
-    .await?;
+    {
+        let mut player = state.mpv_player.lock().await;
+        playback::play_channel(
+            &mut player,
+            &state.current_channel,
+            &channel,
+            audio_lang.as_deref(),
+            subtitle_lang.as_deref(),
+        )
+        .await?;
+    }
+
+    if let Some(channel_id) = channel.id {
+        let conn = state.pool.get()?;
+        mutations::upsert_watch_progress(&conn, channel_id, &channel.content_type, None, None, None, None, None)?;
+    }
 
     info!("Playing channel: {} ({})", channel.name, channel.content_type);
 
