@@ -141,10 +141,17 @@ fila de 1 episódio. Resultado: um único caminho de reprodução de série, um
 ## Testes
 
 - Rust: testes de `upsert_watch_progress` / `get_continue_watching` /
-  `get_watch_progress` / `clear_watch_progress` em `db/queries.rs` e
-  `db/mutations.rs`, seguindo o padrão já usado nos testes existentes desses
-  módulos (helpers de `test_helpers.rs`).
-- Frontend: um teste pra `ContinueWatchingRow` (estado vazio vs com itens) e
-  um teste pro banner de retomada em `SeriesView` (aparece com progresso
-  salvo, ausente sem progresso, botão "começar do zero" limpa o progresso).
-  Sem framework novo, seguindo os testes já existentes desses componentes.
+  `get_watch_progress` em `db/queries.rs` e `db/mutations.rs`, seguindo o
+  padrão já usado nos testes existentes desses módulos (helpers de
+  `test_helpers.rs`).
+- Frontend: **nenhum componente no repo tem teste de render hoje** (só
+  hooks/store/lib puros em `src/test/`, apesar de `@testing-library/react`
+  estar instalado) — descoberto ao levantar os arquivos de teste existentes
+  durante o planejamento, depois da spec já aprovada. Manter esse padrão em
+  vez de introduzir o primeiro teste de componente do projeto pra essa
+  feature: a lógica de fila de episódios (usada tanto pelo clique normal no
+  `EpisodeCard` quanto pelos botões "Continuar"/"Começar do zero") é extraída
+  para uma função pura testável (`getRemainingEpisodes`), que ganha teste
+  seguindo o padrão de `src/test/lib/`. `ContinueWatchingRow` e o banner de
+  `SeriesView` continuam sem teste dedicado, como todo o resto dos
+  componentes React do projeto.
