@@ -148,6 +148,9 @@ pub fn run() {
             // Series commands
             get_series_info,
             play_episode_with_season,
+            // Watch progress commands
+            get_watch_progress,
+            get_continue_watching,
             // Settings commands
             get_setting,
             set_setting,
