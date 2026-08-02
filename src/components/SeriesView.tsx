@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePlayerStore } from '../stores/player-store';
-import { getSeriesInfo } from '../lib/tauri';
+import { getSeriesInfo, getWatchProgress } from '../lib/tauri';
+import { getRemainingEpisodes } from '../lib/episodeQueue';
 import { ChevronLeft, Play } from 'lucide-react';
-import type { Episode } from '../types';
+import type { Episode, WatchProgress } from '../types';
 import { logger } from '../lib/logger';
 
 interface SeriesViewProps {
   seriesId: number;
+  channelId: number;
   seriesName: string;
   serverUrl: string;
   username: string;
@@ -16,12 +18,15 @@ interface SeriesViewProps {
     episodeId: string,
     extension: string,
     title: string,
+    seasonNumber: number,
+    episodeNum: number,
     remainingEpisodes?: Array<{ id: string; title: string; extension: string }>
   ) => void;
 }
 
 export default function SeriesView({
   seriesId,
+  channelId,
   seriesName: _seriesName,
   serverUrl,
   username,
@@ -35,13 +40,18 @@ export default function SeriesView({
   const setSelectedSeason = usePlayerStore((s) => s.setSelectedSeason);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [watchProgress, setWatchProgress] = useState<WatchProgress | null>(null);
 
   useEffect(() => {
     async function loadSeriesInfo() {
       try {
         setIsLoading(true);
-        const info = await getSeriesInfo(serverUrl, username, password, seriesId);
+        const [info, progress] = await Promise.all([
+          getSeriesInfo(serverUrl, username, password, seriesId),
+          getWatchProgress(channelId),
+        ]);
         setCurrentSeries(info);
+        setWatchProgress(progress);
         // Auto-select first season
         if (info.seasons.length > 0) {
           setSelectedSeason(info.seasons[0].season_number);
@@ -59,8 +69,57 @@ export default function SeriesView({
     return () => {
       setCurrentSeries(null);
       setSelectedSeason(null);
+      setWatchProgress(null);
     };
-  }, [seriesId, serverUrl, username, password, setCurrentSeries, setSelectedSeason]);
+  }, [seriesId, channelId, serverUrl, username, password, setCurrentSeries, setSelectedSeason]);
+
+  const handleContinue = useCallback(() => {
+    if (!watchProgress?.episode_id || !currentSeries) return;
+
+    const seasonKey = String(watchProgress.season_number ?? '');
+    const seasonEpisodes = currentSeries.episodes[seasonKey] ?? [];
+    const remaining = getRemainingEpisodes(seasonEpisodes, watchProgress.episode_id);
+    const queue =
+      remaining.length > 0
+        ? remaining
+        : [
+            {
+              id: watchProgress.episode_id,
+              title: watchProgress.episode_title ?? '',
+              extension: watchProgress.episode_extension ?? '',
+            },
+          ];
+
+    onPlayEpisode(
+      watchProgress.episode_id,
+      watchProgress.episode_extension ?? '',
+      watchProgress.episode_title ?? '',
+      watchProgress.season_number ?? 1,
+      watchProgress.episode_num ?? 1,
+      queue
+    );
+  }, [watchProgress, currentSeries, onPlayEpisode]);
+
+  const handleRestart = useCallback(() => {
+    if (!currentSeries || currentSeries.seasons.length === 0) return;
+
+    const firstSeasonNumber = currentSeries.seasons[0].season_number;
+    const seasonEpisodes = [...(currentSeries.episodes[firstSeasonNumber] ?? [])].sort(
+      (a, b) => a.episode_num - b.episode_num
+    );
+    const firstEpisode = seasonEpisodes[0];
+    if (!firstEpisode) return;
+
+    const queue = getRemainingEpisodes(seasonEpisodes, firstEpisode.id);
+    onPlayEpisode(
+      firstEpisode.id,
+      firstEpisode.container_extension,
+      firstEpisode.title,
+      firstEpisode.season,
+      firstEpisode.episode_num,
+      queue
+    );
+  }, [currentSeries, onPlayEpisode]);
 
   if (isLoading) {
     return (
@@ -137,6 +196,32 @@ export default function SeriesView({
         </div>
       </div>
 
+      {/* Resume banner */}
+      {watchProgress && (
+        <div className="border-b border-border bg-surface-hover">
+          <div className="mx-auto flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+            <p className="text-fluid-sm text-text">
+              Continue: S{watchProgress.season_number} E{watchProgress.episode_num}
+              {watchProgress.episode_title ? ` — ${watchProgress.episode_title}` : ''}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleContinue}
+                className="rounded-lg bg-accent px-4 py-2 text-fluid-sm font-medium text-white hover:bg-accent-hover"
+              >
+                Continue
+              </button>
+              <button
+                onClick={handleRestart}
+                className="rounded-lg bg-surface-hover px-4 py-2 text-fluid-sm font-medium text-text hover:bg-border"
+              >
+                Start Over
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Season Selector */}
       <div className="border-b border-border bg-surface">
         <div className="mx-auto max-w-7xl px-6">
@@ -169,7 +254,7 @@ export default function SeriesView({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {selectedSeasonEpisodes.map((episode, index) => (
+              {selectedSeasonEpisodes.map((episode) => (
                 <EpisodeCard
                   key={episode.id}
                   episode={episode}
@@ -180,14 +265,9 @@ export default function SeriesView({
                       episode.id,
                       episode.container_extension,
                       episode.title,
-                      selectedSeasonEpisodes
-                        .slice(index)
-                        .sort((a, b) => a.episode_num - b.episode_num)
-                        .map((ep) => ({
-                          id: ep.id,
-                          title: ep.title,
-                          extension: ep.container_extension,
-                        }))
+                      episode.season,
+                      episode.episode_num,
+                      getRemainingEpisodes(selectedSeasonEpisodes, episode.id)
                     )
                   }
                 />
