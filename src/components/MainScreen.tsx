@@ -6,6 +6,7 @@ import { CategoryBar } from './CategoryBar';
 import { ChannelCard } from './ChannelCard';
 import { SearchBar } from './SearchBar';
 import { ContentTypeTabs } from './ContentTypeTabs';
+import { ContinueWatchingRow } from './ContinueWatchingRow';
 import { NowPlayingBar } from './NowPlayingBar';
 import { Settings as SettingsIcon } from 'lucide-react';
 import SeriesView from './SeriesView';
@@ -52,6 +53,8 @@ export default function MainScreen() {
   const currentPlaylist = usePlayerStore((s) => s.currentPlaylist);
   const setChannels = usePlayerStore((s) => s.setChannels);
   const toggleChannelFavorite = usePlayerStore((s) => s.toggleChannelFavorite);
+  const continueWatching = usePlayerStore((s) => s.continueWatching);
+  const loadContinueWatching = usePlayerStore((s) => s.loadContinueWatching);
 
   // Parental
   const parentalEnabled = usePlayerStore((s) => s.parentalEnabled);
@@ -99,6 +102,12 @@ export default function MainScreen() {
       })
       .catch((err) => logger.error('Failed to check stale playlists:', err));
   }, [currentPlaylist?.id]);
+
+  // Load continue-watching entries for the active playlist
+  useEffect(() => {
+    if (!currentPlaylist?.id) return;
+    loadContinueWatching(currentPlaylist.id);
+  }, [currentPlaylist?.id, loadContinueWatching]);
 
   // Fetch categories when playlist or content type changes
   useEffect(() => {
@@ -192,6 +201,20 @@ export default function MainScreen() {
     ]
   );
 
+  const handleSelectContinueWatching = useCallback(
+    (channelId: number) => {
+      const channel = channels.find((c) => c.id === channelId);
+      if (!channel) return;
+
+      if (channel.content_type === 'series') {
+        setSelectedSeries(channel);
+      } else {
+        handlePlayChannel(channel);
+      }
+    },
+    [channels, handlePlayChannel]
+  );
+
   const handleFocusedRowChange = useCallback(
     (row: number) => rowVirtualizer.scrollToIndex(row),
     [rowVirtualizer]
@@ -209,16 +232,27 @@ export default function MainScreen() {
       episodeId: string,
       extension: string,
       title: string,
+      seasonNumber: number,
+      episodeNum: number,
       remainingEpisodes?: Array<{ id: string; title: string; extension: string }>
     ) => {
-      if (!currentPlaylist) return;
+      if (!currentPlaylist || !selectedSeries?.id) return;
       try {
-        await playEpisodeAction(episodeId, extension, title, currentPlaylist, remainingEpisodes);
+        await playEpisodeAction(
+          selectedSeries.id,
+          episodeId,
+          extension,
+          title,
+          seasonNumber,
+          episodeNum,
+          currentPlaylist,
+          remainingEpisodes
+        );
       } catch (err) {
         logger.error('Failed to play episode:', err);
       }
     },
-    [currentPlaylist, playEpisodeAction]
+    [currentPlaylist, selectedSeries, playEpisodeAction]
   );
 
   const handlePinSuccess = useCallback(() => {
@@ -271,6 +305,7 @@ export default function MainScreen() {
     return (
       <SeriesView
         seriesId={seriesId}
+        channelId={selectedSeries.id}
         seriesName={selectedSeries.name}
         serverUrl={currentPlaylist.url}
         username={currentPlaylist.xtream_username}
@@ -307,6 +342,11 @@ export default function MainScreen() {
 
       {/* Content Type Tabs */}
       <ContentTypeTabs activeFilter={contentTypeFilter} onFilterChange={setContentTypeFilter} />
+
+      {/* Continue Watching */}
+      {contentTypeFilter === 'all' && (
+        <ContinueWatchingRow entries={continueWatching} onSelect={handleSelectContinueWatching} />
+      )}
 
       {/* Category Bar - horizontal scrollable chips */}
       <CategoryBar />
