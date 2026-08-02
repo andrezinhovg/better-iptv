@@ -37,9 +37,12 @@ interface UseChannelPlaybackResult {
   stop: () => Promise<void>;
   /** Play episode(s) from a series */
   playEpisode: (
+    channelId: number,
     episodeId: string,
     extension: string,
     title: string,
+    seasonNumber: number,
+    episodeNum: number,
     playlist: Playlist,
     remainingEpisodes?: PlaylistEpisode[]
   ) => Promise<void>;
@@ -63,6 +66,7 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
   const setIsPlaying = usePlayerStore((s) => s.setIsPlaying);
   const setCurrentProgram = usePlayerStore((s) => s.setCurrentProgram);
   const setNextProgram = usePlayerStore((s) => s.setNextProgram);
+  const loadContinueWatching = usePlayerStore((s) => s.loadContinueWatching);
 
   // Poll MPV playback status to detect when player is closed externally
   useEffect(() => {
@@ -125,6 +129,7 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
         await tauriPlayChannel(channel);
         setCurrentChannel(channel);
         setIsPlaying(true);
+        loadContinueWatching(channel.playlist_id);
 
         // Fetch EPG data if channel has EPG ID
         if (channel.epg_id) {
@@ -146,7 +151,15 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
         throw err;
       }
     },
-    [currentChannel, isPlaying, setCurrentChannel, setIsPlaying, setCurrentProgram, setNextProgram]
+    [
+      currentChannel,
+      isPlaying,
+      setCurrentChannel,
+      setIsPlaying,
+      setCurrentProgram,
+      setNextProgram,
+      loadContinueWatching,
+    ]
   );
 
   // Stop playback
@@ -162,12 +175,16 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
     }
   }, [setIsPlaying, setCurrentProgram, setNextProgram]);
 
-  // Play episode(s) from a series
+  // Play episode(s) from a series. Always goes through the season-playlist
+  // command (even for a queue of 1) — one recording path, one code path.
   const playEpisode = useCallback(
     async (
+      channelId: number,
       episodeId: string,
       extension: string,
       title: string,
+      seasonNumber: number,
+      episodeNum: number,
       playlist: Playlist,
       remainingEpisodes?: PlaylistEpisode[]
     ) => {
@@ -177,39 +194,39 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
       }
 
       try {
-        if (remainingEpisodes && remainingEpisodes.length > 0) {
-          // Play season playlist
-          await playEpisodeWithSeason(
-            playlist.url,
-            playlist.xtream_username,
-            playlist.xtream_password,
-            remainingEpisodes
-          );
-          setIsPlaying(true);
-        } else {
-          // Fallback: play single episode
-          const episodeUrl = `${playlist.url.replace(/\/$/, '')}/series/${playlist.xtream_username}/${playlist.xtream_password}/${episodeId}.${extension}`;
+        const queue =
+          remainingEpisodes && remainingEpisodes.length > 0
+            ? remainingEpisodes
+            : [{ id: episodeId, title, extension }];
 
-          const episodeChannel: Channel = {
-            id: -1, // Virtual channel
-            playlist_id: playlist.id || 0,
-            name: title,
-            url: episodeUrl,
-            content_type: 'series',
-            is_favorite: false,
-            sort_order: 0,
-          };
+        await playEpisodeWithSeason(
+          playlist.url,
+          playlist.xtream_username,
+          playlist.xtream_password,
+          channelId,
+          seasonNumber,
+          episodeNum,
+          queue
+        );
 
-          await tauriPlayChannel(episodeChannel);
-          setCurrentChannel(episodeChannel);
-          setIsPlaying(true);
-        }
+        const episodeChannel: Channel = {
+          id: channelId,
+          playlist_id: playlist.id || 0,
+          name: title,
+          url: `${playlist.url.replace(/\/$/, '')}/series/${playlist.xtream_username}/${playlist.xtream_password}/${episodeId}.${extension}`,
+          content_type: 'series',
+          is_favorite: false,
+          sort_order: 0,
+        };
+        setCurrentChannel(episodeChannel);
+        setIsPlaying(true);
+        if (playlist.id) loadContinueWatching(playlist.id);
       } catch (err) {
         logger.error('Failed to play episode:', err);
         throw err;
       }
     },
-    [setCurrentChannel, setIsPlaying]
+    [setCurrentChannel, setIsPlaying, loadContinueWatching]
   );
 
   return {
