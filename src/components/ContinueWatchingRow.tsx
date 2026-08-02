@@ -1,0 +1,65 @@
+import { memo } from 'react';
+import type { ContinueWatchingEntry } from '../types';
+
+interface ContinueWatchingRowProps {
+  /** Most-recently-watched items, most recent first */
+  entries: ContinueWatchingEntry[];
+  /** Callback with the channel_id of the selected entry */
+  onSelect: (channelId: number) => void;
+}
+
+/**
+ * Horizontal "Continue Watching" strip shown above the channel grid on the
+ * "All" tab. Renders nothing when there's no watch history yet.
+ */
+export const ContinueWatchingRow = memo(function ContinueWatchingRow({
+  entries,
+  onSelect,
+}: ContinueWatchingRowProps) {
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="border-b border-border bg-surface">
+      <div className="mx-auto px-6 py-5">
+        <h2 className="mb-3 text-fluid-sm font-medium text-text-muted">Continue Watching</h2>
+        <div className="flex gap-4 overflow-x-auto">
+          {entries.map((entry) => (
+            <button
+              key={entry.channel_id}
+              onClick={() => onSelect(entry.channel_id)}
+              className="flex w-40 flex-shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-bg text-left transition-shadow hover:shadow-lg"
+            >
+              <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                {entry.logo ? (
+                  <img
+                    src={entry.logo}
+                    alt={entry.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-fluid-xl font-bold text-white">
+                    {entry.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="p-3">
+                <p className="truncate text-fluid-sm font-medium text-text">{entry.name}</p>
+                {entry.content_type === 'series' &&
+                  entry.season_number != null &&
+                  entry.episode_num != null && (
+                    <p className="truncate text-fluid-xs text-text-muted">
+                      T{entry.season_number} E{entry.episode_num}
+                    </p>
+                  )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+export default ContinueWatchingRow;
