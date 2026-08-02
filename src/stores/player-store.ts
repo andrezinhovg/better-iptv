@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Channel, Playlist, SeriesInfo } from '../types';
-import { getParentalSettings, getBlockedChannels, toggleFavorite } from '../lib/tauri';
+import type { Channel, Playlist, SeriesInfo, ContinueWatchingEntry } from '../types';
+import { getParentalSettings, getBlockedChannels, toggleFavorite, getContinueWatching } from '../lib/tauri';
 
 interface PlayerState {
   // Playlists
@@ -84,6 +84,11 @@ interface PlayerState {
   setParentalAutoDetect: (enabled: boolean) => void;
   loadParentalSettings: () => Promise<void>;
   checkChannelBlocked: (channel: Channel) => boolean;
+
+  // Continue Watching
+  continueWatching: ContinueWatchingEntry[];
+  setContinueWatching: (entries: ContinueWatchingEntry[]) => void;
+  loadContinueWatching: (playlistId: number) => Promise<void>;
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -252,5 +257,17 @@ export const usePlayerStore = create<PlayerState>((set) => ({
     if (channel.id && state.blockedChannelIds.has(channel.id)) return true;
     if (channel.group_name && state.blockedCategories.includes(channel.group_name)) return true;
     return false;
+  },
+
+  // Continue Watching
+  continueWatching: [],
+  setContinueWatching: (entries) => set({ continueWatching: entries }),
+  loadContinueWatching: async (playlistId) => {
+    try {
+      const entries = await getContinueWatching(playlistId, 20);
+      set({ continueWatching: entries });
+    } catch (error) {
+      console.error('Failed to load continue watching:', error);
+    }
   },
 }));
