@@ -67,13 +67,6 @@ pub fn init_schema(conn: &Connection) -> Result<()> {
         [],
     )?;
 
-    // Create index for channel search (LIKE queries on name and group_name)
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_channel_search
-         ON channels(name, group_name)",
-        [],
-    )?;
-
     // Index for playlist filtering (frequently used in WHERE playlist_id = ?)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_channels_playlist_id

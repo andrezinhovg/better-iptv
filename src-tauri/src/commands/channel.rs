@@ -40,19 +40,6 @@ pub async fn get_channel_groups(
 }
 
 #[tauri::command]
-pub async fn search_channels(
-    state: State<'_, AppState>,
-    query: String,
-) -> Result<Vec<Channel>, AppError> {
-    channel_domain::validate_search_query(&query)?;
-
-    let conn = state.pool.get()?;
-    let channels = queries::search_channels(&conn, &query)?;
-    debug!("search_channels query='{}' -> {} results", query, channels.len());
-    Ok(channels)
-}
-
-#[tauri::command]
 pub async fn toggle_favorite(state: State<'_, AppState>, channel_id: i64) -> Result<(), AppError> {
     channel_domain::validate_channel_id(channel_id)?;
 
