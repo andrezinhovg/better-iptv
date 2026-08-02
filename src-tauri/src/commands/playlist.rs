@@ -38,19 +38,34 @@ pub async fn import_playlist(
         .await
         .map_err(|e| AppError::Parse(e.to_string()))?;
 
-    let conn = state.pool.get()?;
-
     let playlist = playlist_domain::build_m3u_playlist(name, source)?;
-    let playlist_id = mutations::create_playlist(&conn, &playlist)?;
+    let pool = state.pool.clone();
 
-    let channels_with_playlist = playlist_domain::assign_playlist_id_to_channels(channels, playlist_id);
+    // Playlist creation + batch inserts are synchronous rusqlite calls; run
+    // them on a blocking thread so a large import doesn't hold up the async
+    // runtime worker that also serves concurrent IPC commands (EPG polling,
+    // favorite toggles, etc).
+    let (playlist_id, mut result) = tauri::async_runtime::spawn_blocking(
+        move || -> Result<(i64, Playlist), AppError> {
+            let conn = pool.get()?;
+            let playlist_id = mutations::create_playlist(&conn, &playlist)?;
 
-    let batches = playlist_domain::batch_channels(channels_with_playlist, playlist_domain::DEFAULT_BATCH_SIZE);
-    for batch in batches {
-        mutations::create_channels_batch(&conn, &batch)?;
-    }
+            let channels_with_playlist =
+                playlist_domain::assign_playlist_id_to_channels(channels, playlist_id);
+            let batches = playlist_domain::batch_channels(
+                channels_with_playlist,
+                playlist_domain::DEFAULT_BATCH_SIZE,
+            );
+            for batch in batches {
+                mutations::create_channels_batch(&conn, &batch)?;
+            }
 
-    let mut result = playlist;
+            Ok((playlist_id, playlist))
+        },
+    )
+    .await
+    .map_err(|e| AppError::Database(format!("background task failed: {}", e)))??;
+
     result.id = Some(playlist_id);
     Ok(result)
 }
@@ -100,66 +115,78 @@ pub async fn import_xtream_playlist(
 
     info!("Fetched {} channels from Xtream API", channels.len());
 
-    let conn = state.pool.get()?;
-
     let playlist = playlist_domain::build_xtream_playlist(
         name,
         server_url,
         username,
         password,
     )?;
+    let pool = state.pool.clone();
 
-    let playlist_id = mutations::create_playlist(&conn, &playlist).map_err(|e| {
-        error!("Failed to create playlist: {}", e);
-        e
-    })?;
+    // Playlist creation, batch inserts, and the EPG-url settings write are
+    // all synchronous rusqlite calls; run them on a blocking thread so a
+    // large Xtream catalog (tens of thousands of channels) doesn't hold up
+    // the async runtime worker that also serves concurrent IPC commands.
+    let (playlist_id, mut result) = tauri::async_runtime::spawn_blocking(
+        move || -> Result<(i64, Playlist), AppError> {
+            let conn = pool.get()?;
 
-    debug!("Created playlist with ID: {}", playlist_id);
+            let playlist_id = mutations::create_playlist(&conn, &playlist).map_err(|e| {
+                error!("Failed to create playlist: {}", e);
+                e
+            })?;
 
-    let channels_with_playlist = playlist_domain::assign_playlist_id_to_channels(channels, playlist_id);
+            debug!("Created playlist with ID: {}", playlist_id);
 
-    let total_channels = channels_with_playlist.len();
-    debug!(
-        "Inserting {} channels in batches of {}...",
-        total_channels, playlist_domain::DEFAULT_BATCH_SIZE
-    );
+            let channels_with_playlist =
+                playlist_domain::assign_playlist_id_to_channels(channels, playlist_id);
 
-    let batches = playlist_domain::batch_channels(channels_with_playlist, playlist_domain::DEFAULT_BATCH_SIZE);
-    for (batch_num, batch) in batches.iter().enumerate() {
-        mutations::create_channels_batch(&conn, batch).map_err(|e| {
-            error!("Failed to insert channel batch: {}", e);
-            e
-        })?;
-        debug!(
-            "Inserted batch {}/{}",
-            batch_num + 1,
-            batches.len()
-        );
-    }
+            let total_channels = channels_with_playlist.len();
+            debug!(
+                "Inserting {} channels in batches of {}...",
+                total_channels, playlist_domain::DEFAULT_BATCH_SIZE
+            );
 
-    info!(
-        "Xtream import completed: {} channels imported",
-        total_channels
-    );
+            let batches = playlist_domain::batch_channels(
+                channels_with_playlist,
+                playlist_domain::DEFAULT_BATCH_SIZE,
+            );
+            for (batch_num, batch) in batches.iter().enumerate() {
+                mutations::create_channels_batch(&conn, batch).map_err(|e| {
+                    error!("Failed to insert channel batch: {}", e);
+                    e
+                })?;
+                debug!("Inserted batch {}/{}", batch_num + 1, batches.len());
+            }
 
-    let existing_epg_url = queries::get_setting(&conn, "epg_url")?;
-    let has_epg_url = existing_epg_url
-        .as_ref()
-        .map(|u| !u.trim().is_empty())
-        .unwrap_or(false);
+            info!(
+                "Xtream import completed: {} channels imported",
+                total_channels
+            );
 
-    if !has_epg_url {
-        let epg_url = get_xtream_epg_url(&creds);
-        mutations::set_setting(&conn, "epg_url", &epg_url)?;
-        info!(
-            "Auto-populated EPG URL from Xtream provider: {}",
-            crate::utils::mask_credentials(&epg_url)
-        );
-    } else {
-        debug!("EPG URL already configured, skipping auto-population");
-    }
+            let existing_epg_url = queries::get_setting(&conn, "epg_url")?;
+            let has_epg_url = existing_epg_url
+                .as_ref()
+                .map(|u| !u.trim().is_empty())
+                .unwrap_or(false);
 
-    let mut result = playlist;
+            if !has_epg_url {
+                let epg_url = get_xtream_epg_url(&creds);
+                mutations::set_setting(&conn, "epg_url", &epg_url)?;
+                info!(
+                    "Auto-populated EPG URL from Xtream provider: {}",
+                    crate::utils::mask_credentials(&epg_url)
+                );
+            } else {
+                debug!("EPG URL already configured, skipping auto-population");
+            }
+
+            Ok((playlist_id, playlist))
+        },
+    )
+    .await
+    .map_err(|e| AppError::Database(format!("background task failed: {}", e)))??;
+
     result.id = Some(playlist_id);
     Ok(result)
 }
@@ -210,15 +237,26 @@ pub async fn refresh_playlist(
             })?
     };
 
-    // Get new connection for merge
-    let conn = state.pool.get()?;
+    let pool = state.pool.clone();
+    let playlist_name = playlist.name.clone();
 
-    let result = mutations::merge_channels(&conn, playlist_id, &fresh_channels, is_xtream)?;
-    mutations::update_playlist_last_updated(&conn, playlist_id)?;
+    // merge_channels/update_playlist_last_updated are synchronous rusqlite
+    // calls; run on a blocking thread so a large refresh doesn't hold up the
+    // async runtime worker that also serves concurrent IPC commands.
+    let result = tauri::async_runtime::spawn_blocking(
+        move || -> Result<MergeResult, AppError> {
+            let conn = pool.get()?;
+            let result = mutations::merge_channels(&conn, playlist_id, &fresh_channels, is_xtream)?;
+            mutations::update_playlist_last_updated(&conn, playlist_id)?;
+            Ok(result)
+        },
+    )
+    .await
+    .map_err(|e| AppError::Database(format!("background task failed: {}", e)))??;
 
     info!(
         "Playlist '{}' refreshed: {} added, {} updated, {} removed ({} total)",
-        playlist.name, result.added, result.updated, result.removed, result.total
+        playlist_name, result.added, result.updated, result.removed, result.total
     );
 
     Ok(result)

@@ -212,10 +212,19 @@ pub fn assign_playlist_id_to_channels(
 /// # Returns
 /// Vector of channel batches
 pub fn batch_channels(channels: Vec<Channel>, batch_size: usize) -> Vec<Vec<Channel>> {
-    channels
-        .chunks(batch_size)
-        .map(|chunk| chunk.to_vec())
-        .collect()
+    // Consume `channels` by value and collect each chunk directly, instead of
+    // `.chunks().to_vec()` which clones every Channel (name/url/logo strings
+    // included) just to reshape a Vec we already own.
+    let mut iter = channels.into_iter();
+    let mut batches = Vec::new();
+    loop {
+        let batch: Vec<Channel> = iter.by_ref().take(batch_size).collect();
+        if batch.is_empty() {
+            break;
+        }
+        batches.push(batch);
+    }
+    batches
 }
 
 // ========== Constants ==========
