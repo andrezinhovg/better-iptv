@@ -97,6 +97,45 @@ pub fn toggle_favorite(conn: &Connection, channel_id: i64) -> Result<()> {
     Ok(())
 }
 
+// ========== Watch Progress Mutations ==========
+
+/// Record the last episode/item opened for a channel. Upserts a single row
+/// per channel_id — this is a pointer, not a history log.
+pub fn upsert_watch_progress(
+    conn: &Connection,
+    channel_id: i64,
+    content_type: &str,
+    episode_id: Option<&str>,
+    episode_extension: Option<&str>,
+    season_number: Option<i32>,
+    episode_num: Option<i32>,
+    episode_title: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO watch_progress
+         (channel_id, content_type, episode_id, episode_extension, season_number, episode_num, episode_title, watched_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP)
+         ON CONFLICT(channel_id) DO UPDATE SET
+            content_type = excluded.content_type,
+            episode_id = excluded.episode_id,
+            episode_extension = excluded.episode_extension,
+            season_number = excluded.season_number,
+            episode_num = excluded.episode_num,
+            episode_title = excluded.episode_title,
+            watched_at = CURRENT_TIMESTAMP",
+        params![
+            channel_id,
+            content_type,
+            episode_id,
+            episode_extension,
+            season_number,
+            episode_num,
+            episode_title
+        ],
+    )?;
+    Ok(())
+}
+
 // ========== Settings Mutations ==========
 
 pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<()> {
@@ -507,6 +546,78 @@ mod tests {
             get_channels(&conn, Some(playlist_id)).unwrap().len(),
             KEEP_COUNT as usize
         );
+    }
+
+    // ========== Watch Progress Tests ==========
+
+    #[test]
+    fn test_upsert_watch_progress_inserts_series_pointer() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel_id = create_test_channel(&conn, playlist_id, "Series C");
+
+        upsert_watch_progress(
+            &conn,
+            channel_id,
+            "series",
+            Some("ep-1"),
+            Some("mp4"),
+            Some(1),
+            Some(3),
+            Some("Pilot"),
+        )
+        .unwrap();
+
+        let result = get_watch_progress(&conn, channel_id).unwrap().unwrap();
+        assert_eq!(result.content_type, "series");
+        assert_eq!(result.episode_id.as_deref(), Some("ep-1"));
+        assert_eq!(result.episode_extension.as_deref(), Some("mp4"));
+        assert_eq!(result.season_number, Some(1));
+        assert_eq!(result.episode_num, Some(3));
+        assert_eq!(result.episode_title.as_deref(), Some("Pilot"));
+    }
+
+    #[test]
+    fn test_upsert_watch_progress_live_channel_has_no_episode_fields() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel_id = create_test_channel(&conn, playlist_id, "Live C");
+
+        upsert_watch_progress(&conn, channel_id, "live", None, None, None, None, None).unwrap();
+
+        let result = get_watch_progress(&conn, channel_id).unwrap().unwrap();
+        assert_eq!(result.content_type, "live");
+        assert!(result.episode_id.is_none());
+        assert!(result.season_number.is_none());
+    }
+
+    #[test]
+    fn test_upsert_watch_progress_updates_existing_row_in_place() {
+        let conn = setup_test_db();
+        let playlist_id = create_test_playlist(&conn, "P");
+        let channel_id = create_test_channel(&conn, playlist_id, "Series C");
+
+        upsert_watch_progress(
+            &conn, channel_id, "series", Some("ep-1"), Some("mp4"), Some(1), Some(1), Some("Pilot"),
+        )
+        .unwrap();
+        upsert_watch_progress(
+            &conn, channel_id, "series", Some("ep-2"), Some("mp4"), Some(1), Some(2), Some("Second"),
+        )
+        .unwrap();
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM watch_progress WHERE channel_id = ?1",
+                params![channel_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "upsert must update in place, not insert a second row");
+
+        let result = get_watch_progress(&conn, channel_id).unwrap().unwrap();
+        assert_eq!(result.episode_id.as_deref(), Some("ep-2"));
+        assert_eq!(result.episode_num, Some(2));
     }
 
     // ========== Settings Tests ==========
