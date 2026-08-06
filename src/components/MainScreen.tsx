@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { usePlayerStore } from '../stores/player-store';
 import { getChannelGroups, getStalePlaylistIds, getChannels } from '../lib/tauri';
-import { CategoryBar } from './CategoryBar';
+import { CategorySidebar } from './CategorySidebar';
 import { ChannelCard } from './ChannelCard';
 import { SearchBar } from './SearchBar';
 import { ContentTypeTabs } from './ContentTypeTabs';
@@ -81,7 +81,11 @@ export default function MainScreen() {
   // Global keyboard shortcuts (Space=play/stop, /=focus search, Escape=stop)
   useKeyboardShortcuts(searchInputRef);
 
-  // Responsive grid configuration
+  // Responsive grid configuration. Card height stays uniform across every
+  // tab (the row virtualizer assumes one height for the whole grid). Poster
+  // mode (Movies/Series tabs) only changes how ChannelCard renders the
+  // artwork inside that fixed-size card — see posterMode there.
+  const isPosterTab = contentTypeFilter === 'vod' || contentTypeFilter === 'series';
   const { columns, cardHeight, estimatedRowHeight } = useResponsiveGrid();
 
   // Load parental settings on mount
@@ -169,23 +173,30 @@ export default function MainScreen() {
   }, [channels]);
 
   // Continue Watching entries, filtered against the same parental "hide" predicate
-  // the main grid uses (see useChannelFilter.ts), so blocked content doesn't sneak
-  // in via the row.
+  // the main grid uses (see useChannelFilter.ts) so blocked content doesn't sneak
+  // in via the row, then scoped to the active tab so each tab only shows its own
+  // kind of history ("favorites" has no content_type of its own, so it's scoped
+  // via the channel's is_favorite flag instead).
   const visibleContinueWatching = useMemo(() => {
-    if (!(parentalEnabled && !parentalUnlocked && parentalVisibility === 'hide')) {
-      return continueWatching;
+    const parentalFiltered = !(parentalEnabled && !parentalUnlocked && parentalVisibility === 'hide')
+      ? continueWatching
+      : continueWatching.filter((entry) => {
+          const channel = channelsById.get(entry.channel_id);
+          if (!channel) return false;
+          return !shouldBlockChannel(channel, {
+            enabled: parentalEnabled,
+            autoDetect: parentalAutoDetect,
+            blockedIds: blockedChannelIds,
+            blockedCategories: blockedCategories,
+            unlocked: parentalUnlocked,
+          });
+        });
+
+    if (contentTypeFilter === 'all') return parentalFiltered;
+    if (contentTypeFilter === 'favorites') {
+      return parentalFiltered.filter((entry) => channelsById.get(entry.channel_id)?.is_favorite);
     }
-    return continueWatching.filter((entry) => {
-      const channel = channelsById.get(entry.channel_id);
-      if (!channel) return false;
-      return !shouldBlockChannel(channel, {
-        enabled: parentalEnabled,
-        autoDetect: parentalAutoDetect,
-        blockedIds: blockedChannelIds,
-        blockedCategories: blockedCategories,
-        unlocked: parentalUnlocked,
-      });
-    });
+    return parentalFiltered.filter((entry) => entry.content_type === contentTypeFilter);
   }, [
     continueWatching,
     channelsById,
@@ -195,6 +206,7 @@ export default function MainScreen() {
     blockedChannelIds,
     blockedCategories,
     parentalVisibility,
+    contentTypeFilter,
   ]);
 
   // Virtual scrolling setup - virtualize by rows (dynamic items per row)
@@ -224,7 +236,7 @@ export default function MainScreen() {
         return;
       }
 
-      const result = await playChannelAction(channel);
+      const result = await playChannelAction(channel, currentPlaylist ?? undefined);
       if (result?.type === 'series') {
         setSelectedSeries(result.channel);
       }
@@ -236,6 +248,7 @@ export default function MainScreen() {
       blockedCategories,
       parentalUnlocked,
       playChannelAction,
+      currentPlaylist,
     ]
   );
 
@@ -290,15 +303,18 @@ export default function MainScreen() {
   const handlePinSuccess = useCallback(() => {
     setShowPinModal(false);
     if (pendingChannel) {
-      playChannelAction(pendingChannel)
-        .then(() => {
+      playChannelAction(pendingChannel, currentPlaylist ?? undefined)
+        .then((result) => {
+          if (result?.type === 'series') {
+            setSelectedSeries(result.channel);
+          }
           setPendingChannel(null);
         })
         .catch((err) => {
           logger.error('Failed to play channel after PIN:', err);
         });
     }
-  }, [pendingChannel, playChannelAction]);
+  }, [pendingChannel, playChannelAction, currentPlaylist]);
 
   const handleStop = useCallback(async () => {
     await stopPlaybackAction();
@@ -369,94 +385,93 @@ export default function MainScreen() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <SearchBar ref={searchInputRef} value={searchQuery} onChange={setSearchQuery} />
-
       {/* Content Type Tabs */}
       <ContentTypeTabs activeFilter={contentTypeFilter} onFilterChange={setContentTypeFilter} />
 
-      {/* Continue Watching */}
-      {contentTypeFilter === 'all' && (
-        <ContinueWatchingRow
-          entries={visibleContinueWatching}
-          onSelect={handleSelectContinueWatching}
-        />
-      )}
+      {/* Search Bar */}
+      <SearchBar ref={searchInputRef} value={searchQuery} onChange={setSearchQuery} />
 
-      {/* Category Bar - horizontal scrollable chips */}
-      <CategoryBar />
+      {/* Continue Watching - scoped to the active tab; renders nothing when empty */}
+      <ContinueWatchingRow
+        entries={visibleContinueWatching}
+        onSelect={handleSelectContinueWatching}
+      />
 
-      {/* Channel List with Virtual Scrolling */}
-      <div
-        ref={parentRef}
-        onKeyDown={handleKeyDown}
-        className="flex-1 overflow-y-auto"
-        id="channel-list"
-        role="tabpanel"
-        aria-label="Channel list"
-      >
-        <div className="mx-auto p-6">
-          {filteredChannels.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-fluid-base text-text-muted">
-                {searchQuery ? 'No channels found' : 'No channels available'}
-              </p>
-            </div>
-          ) : (
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const startIndex = virtualRow.index * columns;
-                const rowItems = filteredChannels.slice(startIndex, startIndex + columns);
+      {/* Category Sidebar + Channel List with Virtual Scrolling */}
+      <div className="flex flex-1 overflow-hidden">
+        <CategorySidebar />
+        <div
+          ref={parentRef}
+          onKeyDown={handleKeyDown}
+          className="flex-1 overflow-y-auto"
+          id="channel-list"
+          role="tabpanel"
+          aria-label="Channel list"
+        >
+          <div className="mx-auto p-6">
+            {filteredChannels.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-fluid-base text-text-muted">
+                  {searchQuery ? 'No channels found' : 'No channels available'}
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const startIndex = virtualRow.index * columns;
+                  const rowItems = filteredChannels.slice(startIndex, startIndex + columns);
 
-                return (
-                  <div
-                    key={virtualRow.key}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                      willChange: 'transform',
-                    }}
-                  >
-                    <div className={`grid ${getGridClasses(columns)} gap-6`}>
-                      {rowItems.map((channel, colIdx) => {
-                        const channelIndex = startIndex + colIdx;
-                        const isChannelBlocked = blockedMap.get(channel.id!) ?? false;
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                        willChange: 'transform',
+                      }}
+                    >
+                      <div className={`grid ${getGridClasses(columns)} gap-6`}>
+                        {rowItems.map((channel, colIdx) => {
+                          const channelIndex = startIndex + colIdx;
+                          const isChannelBlocked = blockedMap.get(channel.id!) ?? false;
 
-                        return (
-                          <ChannelCard
-                            key={channel.id}
-                            channel={channel}
-                            isPlaying={currentChannel?.id === channel.id && isPlaying}
-                            onPlay={handlePlayChannel}
-                            onToggleFavorite={toggleChannelFavorite}
-                            currentProgram={channelEpgData.get(channel.id)}
-                            cardHeight={cardHeight}
-                            isBlocked={isChannelBlocked}
-                            parentalVisibility={parentalVisibility}
-                            isFocused={focusedIndex === channelIndex}
-                            cardRef={(el) => {
-                              cardRefs.current[channelIndex] = el;
-                            }}
-                            onFocus={() => setFocusedIndex(channelIndex)}
-                          />
-                        );
-                      })}
+                          return (
+                            <ChannelCard
+                              key={channel.id}
+                              channel={channel}
+                              isPlaying={currentChannel?.id === channel.id && isPlaying}
+                              onPlay={handlePlayChannel}
+                              onToggleFavorite={toggleChannelFavorite}
+                              currentProgram={channelEpgData.get(channel.id)}
+                              cardHeight={cardHeight}
+                              posterMode={isPosterTab}
+                              isBlocked={isChannelBlocked}
+                              parentalVisibility={parentalVisibility}
+                              isFocused={focusedIndex === channelIndex}
+                              cardRef={(el) => {
+                                cardRefs.current[channelIndex] = el;
+                              }}
+                              onFocus={() => setFocusedIndex(channelIndex)}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

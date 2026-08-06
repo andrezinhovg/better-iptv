@@ -27,9 +27,9 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
             <button
               key={entry.channel_id}
               onClick={() => onSelect(entry.channel_id)}
-              className="flex w-40 flex-shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-bg text-left transition-shadow hover:shadow-lg"
+              className="flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-bg text-left transition-shadow hover:shadow-lg"
             >
-              <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+              <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
                 {entry.logo ? (
                   <img
                     src={entry.logo}
@@ -39,17 +39,17 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-fluid-xl font-bold text-white">
+                  <span className="text-fluid-2xl font-bold text-white">
                     {entry.name.charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
               <div className="p-3">
-                <p className="truncate text-fluid-sm font-medium text-text">{entry.name}</p>
+                <p className="truncate text-fluid-base font-medium text-text">{entry.name}</p>
                 {entry.content_type === 'series' &&
                   entry.season_number != null &&
                   entry.episode_num != null && (
-                    <p className="truncate text-fluid-xs text-text-muted">
+                    <p className="truncate text-fluid-sm text-text-muted">
                       T{entry.season_number} E{entry.episode_num}
                     </p>
                   )}

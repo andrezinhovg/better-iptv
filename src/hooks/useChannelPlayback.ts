@@ -31,8 +31,8 @@ interface UseChannelPlaybackResult {
   currentProgram: string | null;
   /** Next EPG program title */
   nextProgram: string | null;
-  /** Play a channel (or open series view for series content) */
-  play: (channel: Channel) => Promise<{ type: 'series'; channel: Channel } | void>;
+  /** Play a channel (opens series view for series content, when the playlist has Xtream credentials) */
+  play: (channel: Channel, playlist?: Playlist) => Promise<{ type: 'series'; channel: Channel } | void>;
   /** Stop current playback */
   stop: () => Promise<void>;
   /** Play episode(s) from a series */
@@ -109,9 +109,15 @@ export function useChannelPlayback(): UseChannelPlaybackResult {
 
   // Play a channel
   const play = useCallback(
-    async (channel: Channel): Promise<{ type: 'series'; channel: Channel } | void> => {
-      // If it's a series, signal to open series view
-      if (channel.content_type === 'series') {
+    async (
+      channel: Channel,
+      playlist?: Playlist
+    ): Promise<{ type: 'series'; channel: Channel } | void> => {
+      // Series browsing (seasons/episodes) is an Xtream Codes API feature —
+      // M3U playlists have no such structure, so without Xtream credentials
+      // there's no series page to open. Fall through and play the entry
+      // directly instead of silently doing nothing.
+      if (channel.content_type === 'series' && playlist?.xtream_username && playlist?.xtream_password) {
         return { type: 'series', channel };
       }
 

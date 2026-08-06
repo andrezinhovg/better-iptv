@@ -12,6 +12,8 @@ interface ChannelCardProps {
   currentProgram?: string;
   /** Height of the card in pixels */
   cardHeight: number;
+  /** DVD-cover-style tall poster layout (Movies/Series tabs) vs. the standard landscape logo tile */
+  posterMode?: boolean;
   /** Whether this channel is blocked by parental controls */
   isBlocked?: boolean;
   /** Visibility mode for blocked channels */
@@ -42,6 +44,7 @@ export const ChannelCard = memo(function ChannelCard({
   onPlay,
   currentProgram,
   cardHeight,
+  posterMode = false,
   isBlocked = false,
   parentalVisibility = 'hide',
   onToggleFavorite,
@@ -49,8 +52,14 @@ export const ChannelCard = memo(function ChannelCard({
   cardRef,
   onFocus,
 }: ChannelCardProps) {
-  // Calculate dynamic image height (approximately 45% of card height)
-  const imageHeight = Math.max(80, Math.round(cardHeight * 0.45));
+  // Poster mode: a fixed-size artwork box (not proportional to cardHeight)
+  // shown with object-contain, so the whole cover is visible instead of
+  // being cropped to fill — title stays fully visible below, same as
+  // standard mode. Clamped against cardHeight only as a safety floor on the
+  // smallest breakpoints, not as the driving calculation.
+  const imageHeight = posterMode
+    ? Math.max(120, Math.min(200, cardHeight - 100))
+    : Math.max(80, Math.round(cardHeight * 0.45));
 
   // Scale text and padding based on card height
   const isLarge = cardHeight > 280;
@@ -60,13 +69,13 @@ export const ChannelCard = memo(function ChannelCard({
       ref={cardRef}
       tabIndex={isFocused ? 0 : -1}
       onFocus={onFocus}
-      className={`relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-lg ${
-        isFocused ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''
+      className={`relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-all hover:shadow-lg hover:opacity-100 ${
+        isFocused ? 'opacity-100 ring-2 ring-accent ring-offset-2 ring-offset-bg' : 'opacity-75'
       }`}
       style={{ height: `${cardHeight}px` }}
     >
       {/* Logo/Image section */}
-      <div className="group relative flex-shrink-0 bg-bg">
+      <div className={`group relative flex-shrink-0 bg-bg ${posterMode ? 'p-3' : ''}`}>
         {channel.logo ? (
           <div
             className="flex w-full items-center justify-center bg-bg"
@@ -77,7 +86,11 @@ export const ChannelCard = memo(function ChannelCard({
               alt={channel.name}
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-cover"
+              className={
+                posterMode
+                  ? 'h-full w-full rounded-lg border border-border object-contain shadow-md'
+                  : 'h-full w-full object-cover'
+              }
             />
           </div>
         ) : (
@@ -145,9 +158,7 @@ export const ChannelCard = memo(function ChannelCard({
           } ${
             isPlaying
               ? 'bg-red-600 text-white hover:bg-red-700'
-              : channel.content_type === 'series'
-                ? 'bg-purple-600 text-white hover:bg-purple-700'
-                : 'bg-accent text-white hover:bg-accent-hover'
+              : 'bg-accent text-white hover:bg-accent-hover'
           }`}
         >
           {isPlaying ? (

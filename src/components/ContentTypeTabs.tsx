@@ -45,7 +45,7 @@ export const ContentTypeTabs = memo(function ContentTypeTabs({
   onFilterChange,
 }: ContentTypeTabsProps) {
   return (
-    <div className="border-b border-border bg-surface">
+    <div className="border-b border-border bg-black">
       <div className="mx-auto px-6">
         <div className="flex gap-3 overflow-x-auto" role="tablist" aria-label="Content type filter">
           {TABS.map((tab) => (
@@ -58,7 +58,7 @@ export const ContentTypeTabs = memo(function ContentTypeTabs({
               className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-5 py-4 text-fluid-base font-medium transition-colors ${
                 activeFilter === tab.value
                   ? 'border-accent text-accent'
-                  : 'border-transparent text-text-muted hover:text-text'
+                  : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
               {tab.icon}

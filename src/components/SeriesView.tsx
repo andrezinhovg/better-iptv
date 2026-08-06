@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePlayerStore } from '../stores/player-store';
 import { getSeriesInfo, getWatchProgress } from '../lib/tauri';
-import { getRemainingEpisodes } from '../lib/episodeQueue';
+import { getRemainingEpisodes, getNextEpisode, getFirstEpisode } from '../lib/episodeQueue';
 import { ChevronLeft, Play } from 'lucide-react';
 import type { Episode, WatchProgress } from '../types';
 import { logger } from '../lib/logger';
@@ -98,48 +98,37 @@ export default function SeriesView({
   const handleContinue = useCallback(() => {
     if (!watchProgress?.episode_id || !currentSeries) return;
 
-    const seasonKey = String(watchProgress.season_number ?? '');
-    const seasonEpisodes = currentSeries.episodes[seasonKey] ?? [];
-    const remaining = getRemainingEpisodes(seasonEpisodes, watchProgress.episode_id);
-    const queue =
-      remaining.length > 0
-        ? remaining
-        : [
-            {
-              id: watchProgress.episode_id,
-              title: watchProgress.episode_title ?? '',
-              extension: watchProgress.episode_extension ?? '',
-            },
-          ];
+    const next = getNextEpisode(
+      currentSeries.episodes,
+      currentSeries.seasons,
+      watchProgress.season_number ?? 1,
+      watchProgress.episode_id
+    );
+    if (!next) return;
 
     playEpisodeAndRefresh(
-      watchProgress.episode_id,
-      watchProgress.episode_extension ?? '',
-      watchProgress.episode_title ?? '',
-      watchProgress.season_number ?? 1,
-      watchProgress.episode_num ?? 1,
-      queue
+      next.episode.id,
+      next.episode.container_extension,
+      next.episode.title,
+      next.seasonNumber,
+      next.episode.episode_num,
+      next.queue
     );
   }, [watchProgress, currentSeries, playEpisodeAndRefresh]);
 
   const handleRestart = useCallback(() => {
-    if (!currentSeries || currentSeries.seasons.length === 0) return;
+    if (!currentSeries) return;
 
-    const firstSeasonNumber = currentSeries.seasons[0].season_number;
-    const seasonEpisodes = [...(currentSeries.episodes[firstSeasonNumber] ?? [])].sort(
-      (a, b) => a.episode_num - b.episode_num
-    );
-    const firstEpisode = seasonEpisodes[0];
-    if (!firstEpisode) return;
+    const first = getFirstEpisode(currentSeries.episodes, currentSeries.seasons);
+    if (!first) return;
 
-    const queue = getRemainingEpisodes(seasonEpisodes, firstEpisode.id);
     playEpisodeAndRefresh(
-      firstEpisode.id,
-      firstEpisode.container_extension,
-      firstEpisode.title,
-      firstEpisode.season,
-      firstEpisode.episode_num,
-      queue
+      first.episode.id,
+      first.episode.container_extension,
+      first.episode.title,
+      first.seasonNumber,
+      first.episode.episode_num,
+      first.queue
     );
   }, [currentSeries, playEpisodeAndRefresh]);
 
@@ -280,6 +269,7 @@ export default function SeriesView({
                 <EpisodeCard
                   key={episode.id}
                   episode={episode}
+                  isLastWatched={episode.id === watchProgress?.episode_id}
                   onPlay={() =>
                     // Remaining-episodes queue is only needed when the user
                     // actually presses play, not on every render of every card.
@@ -311,12 +301,22 @@ export default function SeriesView({
 interface EpisodeCardProps {
   episode: Episode;
   onPlay: () => void;
+  isLastWatched?: boolean;
 }
 
-function EpisodeCard({ episode, onPlay }: EpisodeCardProps) {
+function EpisodeCard({ episode, onPlay, isLastWatched }: EpisodeCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-lg">
+    <div
+      className={`overflow-hidden rounded-xl border bg-surface shadow-sm transition-shadow hover:shadow-lg ${
+        isLastWatched ? 'border-accent ring-2 ring-accent' : 'border-border'
+      }`}
+    >
       <div className="relative bg-bg">
+        {isLastWatched && (
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-fluid-xs font-medium text-white shadow">
+            Continuar assistindo
+          </span>
+        )}
         {episode.info.movie_image ? (
           <img
             src={episode.info.movie_image}
@@ -347,7 +347,7 @@ function EpisodeCard({ episode, onPlay }: EpisodeCardProps) {
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-fluid-sm font-medium text-white transition-colors hover:bg-accent-hover"
         >
           <Play className="h-4 w-4" />
-          Play
+          {isLastWatched ? 'Continuar' : 'Play'}
         </button>
       </div>
     </div>
