@@ -3,7 +3,7 @@
  */
 
 // Grid and layout
-export { useResponsiveGrid, getGridClasses } from './useResponsiveGrid';
+export { useResponsiveGrid, computeColumns, type GridConfig } from './useResponsiveGrid';
 
 // Error handling
 export { useErrorHandler, withErrorHandling, type Toast } from './useErrorHandler';

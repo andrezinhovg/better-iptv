@@ -16,7 +16,7 @@ import ConfirmationModal from './modals/ConfirmationModal';
 import RefreshModal from './modals/RefreshModal';
 import type { Channel } from '../types';
 import { logger } from '../lib/logger';
-import { useResponsiveGrid, getGridClasses } from '../hooks/useResponsiveGrid';
+import { useResponsiveGrid } from '../hooks/useResponsiveGrid';
 import { useEpgData } from '../hooks/useEpgData';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useChannelPlayback } from '../hooks/useChannelPlayback';
@@ -81,12 +81,14 @@ export default function MainScreen() {
   // Global keyboard shortcuts (Space=play/stop, /=focus search, Escape=stop)
   useKeyboardShortcuts(searchInputRef);
 
-  // Responsive grid configuration. Card height stays uniform across every
-  // tab (the row virtualizer assumes one height for the whole grid). Poster
-  // mode (Movies/Series tabs) only changes how ChannelCard renders the
-  // artwork inside that fixed-size card — see posterMode there.
+  // Column count derived from the real measured width of #channel-list
+  // (see useResponsiveGrid) — row height is intrinsic per-card (aspect-ratio
+  // in ChannelCard) and measured dynamically by the row virtualizer below,
+  // so nothing here needs a JS-guessed pixel height. Poster mode
+  // (Movies/Series tabs) only changes how ChannelCard renders the artwork
+  // aspect ratio — see posterMode there.
   const isPosterTab = contentTypeFilter === 'vod' || contentTypeFilter === 'series';
-  const { columns, cardHeight, estimatedRowHeight } = useResponsiveGrid();
+  const { columns } = useResponsiveGrid(parentRef);
 
   // Load parental settings on mount
   useEffect(() => {
@@ -215,7 +217,7 @@ export default function MainScreen() {
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => estimatedRowHeight,
+    estimateSize: () => 320, // initial guess only; measureElement (via ref below) corrects it after each row renders
     overscan: 2, // Render 2 extra rows above/below viewport (reduced from 3: cards are physically larger post-redesign, so the same row-count buffer now covers a bigger pixel/image area — most noticeable in 4K fullscreen with 6 columns)
   });
 
@@ -430,17 +432,21 @@ export default function MainScreen() {
                   return (
                     <div
                       key={virtualRow.key}
+                      ref={rowVirtualizer.measureElement}
+                      data-index={virtualRow.index}
                       style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
-                        height: `${virtualRow.size}px`,
                         transform: `translateY(${virtualRow.start}px)`,
                         willChange: 'transform',
                       }}
                     >
-                      <div className={`grid ${getGridClasses(columns)} gap-6`}>
+                      <div
+                        className="grid gap-6 pb-6"
+                        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+                      >
                         {rowItems.map((channel, colIdx) => {
                           const channelIndex = startIndex + colIdx;
                           const isChannelBlocked = blockedMap.get(channel.id!) ?? false;
@@ -453,7 +459,6 @@ export default function MainScreen() {
                               onPlay={handlePlayChannel}
                               onToggleFavorite={toggleChannelFavorite}
                               currentProgram={channelEpgData.get(channel.id)}
-                              cardHeight={cardHeight}
                               posterMode={isPosterTab}
                               isBlocked={isChannelBlocked}
                               parentalVisibility={parentalVisibility}

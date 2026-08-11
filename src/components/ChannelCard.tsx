@@ -10,8 +10,6 @@ interface ChannelCardProps {
   onPlay: (channel: Channel) => void;
   /** Current EPG program title */
   currentProgram?: string;
-  /** Height of the card in pixels */
-  cardHeight: number;
   /** DVD-cover-style tall poster layout (Movies/Series tabs) vs. the standard landscape logo tile */
   posterMode?: boolean;
   /** Whether this channel is blocked by parental controls */
@@ -43,7 +41,6 @@ export const ChannelCard = memo(function ChannelCard({
   isPlaying,
   onPlay,
   currentProgram,
-  cardHeight,
   posterMode = false,
   isBlocked = false,
   parentalVisibility = 'hide',
@@ -52,18 +49,6 @@ export const ChannelCard = memo(function ChannelCard({
   cardRef,
   onFocus,
 }: ChannelCardProps) {
-  // Poster mode: a fixed-size artwork box (not proportional to cardHeight)
-  // shown with object-contain, so the whole cover is visible instead of
-  // being cropped to fill — title stays fully visible below, same as
-  // standard mode. Clamped against cardHeight only as a safety floor on the
-  // smallest breakpoints, not as the driving calculation.
-  const imageHeight = posterMode
-    ? Math.max(120, Math.min(200, cardHeight - 100))
-    : Math.max(80, Math.round(cardHeight * 0.45));
-
-  // Scale text and padding based on card height
-  const isLarge = cardHeight > 280;
-
   return (
     <div
       ref={cardRef}
@@ -72,14 +57,12 @@ export const ChannelCard = memo(function ChannelCard({
       className={`relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-all hover:shadow-lg hover:opacity-100 ${
         isFocused ? 'opacity-100 ring-2 ring-accent ring-offset-2 ring-offset-bg' : 'opacity-75'
       }`}
-      style={{ height: `${cardHeight}px` }}
     >
       {/* Logo/Image section */}
       <div className={`group relative flex-shrink-0 bg-bg ${posterMode ? 'p-3' : ''}`}>
         {channel.logo ? (
           <div
-            className="flex w-full items-center justify-center bg-bg"
-            style={{ height: `${imageHeight}px` }}
+            className={`flex w-full items-center justify-center bg-bg ${posterMode ? 'aspect-[2/3]' : 'aspect-video'}`}
           >
             <img
               src={channel.logo}
@@ -95,12 +78,9 @@ export const ChannelCard = memo(function ChannelCard({
           </div>
         ) : (
           <div
-            className="flex w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600"
-            style={{ height: `${imageHeight}px` }}
+            className={`flex w-full items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 ${posterMode ? 'aspect-[2/3]' : 'aspect-video'}`}
           >
-            <span
-              className={`font-bold text-white ${isLarge ? 'text-fluid-3xl' : 'text-fluid-2xl'}`}
-            >
+            <span className="text-fluid-2xl font-bold text-white">
               {channel.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -128,12 +108,8 @@ export const ChannelCard = memo(function ChannelCard({
       </div>
 
       {/* Content section */}
-      <div className={`${isLarge ? 'p-6' : 'p-5'} flex min-h-0 flex-1 flex-col`}>
-        <h3
-          className={`truncate font-medium text-text ${isLarge ? 'text-fluid-lg' : 'text-fluid-base'}`}
-        >
-          {channel.name}
-        </h3>
+      <div className="flex min-h-0 flex-1 flex-col p-5">
+        <h3 className="truncate text-fluid-lg font-medium text-text">{channel.name}</h3>
         {channel.group_name && (
           <p className="mt-0.5 truncate text-fluid-sm text-text-muted">
             {channel.group_name}
@@ -153,9 +129,7 @@ export const ChannelCard = memo(function ChannelCard({
         <button
           tabIndex={-1}
           onClick={() => onPlay(channel)}
-          className={`flex w-full items-center justify-center gap-2 rounded-lg font-medium text-fluid-sm transition-colors ${
-            isLarge ? 'mt-4 px-5 py-3' : 'mt-3 px-5 py-2.5'
-          } ${
+          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 font-medium text-fluid-sm transition-colors ${
             isPlaying
               ? 'bg-red-600 text-white hover:bg-red-700'
               : 'bg-accent text-white hover:bg-accent-hover'
