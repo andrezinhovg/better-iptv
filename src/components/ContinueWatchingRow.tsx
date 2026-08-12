@@ -26,10 +26,11 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
   const isCompact = useIsCompactViewport();
   const [pinned, setPinned] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   if (entries.length === 0) return null;
 
-  const expanded = !isCompact || pinned || hovering;
+  const expanded = !isCompact || pinned || hovering || focused;
 
   const cards = (
     <div className="flex gap-4 overflow-x-auto">
@@ -85,10 +86,10 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
       className="relative flex-shrink-0 border-b border-border bg-surface"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      onFocus={() => setHovering(true)}
+      onFocus={() => setFocused(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          setHovering(false);
+          setFocused(false);
         }
       }}
     >
