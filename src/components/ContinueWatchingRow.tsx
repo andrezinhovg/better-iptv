@@ -94,15 +94,19 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
       }}
     >
       <button
-        onClick={() => setPinned((p) => !p)}
+        onClick={() => {
+          setPinned((p) => !p);
+          setHovering(false);
+          setFocused(false);
+        }}
         aria-expanded={expanded}
         className="flex h-10 w-full items-center justify-between px-6 text-fluid-sm font-medium text-text-muted hover:bg-surface-hover"
       >
-        <span>Continue Watching</span>
+        <h2 className="contents">Continue Watching</h2>
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {expanded && (
-        <div className="absolute inset-x-0 top-10 z-10 border-b border-border bg-surface px-6 pb-5 shadow-lg">
+        <div className="absolute inset-x-0 top-10 z-10 max-h-[50vh] overflow-y-auto border-b border-border bg-surface px-6 pb-5 shadow-lg">
           {cards}
         </div>
       )}
