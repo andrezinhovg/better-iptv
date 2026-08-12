@@ -46,7 +46,7 @@ export const CategorySidebar = memo(function CategorySidebar() {
   }
 
   return (
-    <div className="flex w-60 flex-shrink-0 flex-col border-r border-border bg-surface">
+    <div className="flex min-h-0 w-60 flex-shrink-0 flex-col border-r border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border p-3">
         <h2 className="text-fluid-sm font-medium text-text-muted">Categories</h2>
         <button
@@ -72,7 +72,7 @@ export const CategorySidebar = memo(function CategorySidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2" role="tablist" aria-label="Channel categories">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2" role="tablist" aria-label="Channel categories">
         <button
           onClick={() => setCategoryFilter(null)}
           role="tab"

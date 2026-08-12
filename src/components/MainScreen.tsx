@@ -400,12 +400,12 @@ export default function MainScreen() {
       />
 
       {/* Category Sidebar + Channel List with Virtual Scrolling */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <CategorySidebar />
         <div
           ref={parentRef}
           onKeyDown={handleKeyDown}
-          className="flex-1 overflow-y-auto"
+          className="min-h-0 flex-1 overflow-y-auto"
           id="channel-list"
           role="tabpanel"
           aria-label="Channel list"
