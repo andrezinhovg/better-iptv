@@ -4,6 +4,7 @@
 
 // Grid and layout
 export { useResponsiveGrid, computeColumns, type GridConfig } from './useResponsiveGrid';
+export { useIsCompactViewport } from './useIsCompactViewport';
 
 // Error handling
 export { useErrorHandler, withErrorHandling, type Toast } from './useErrorHandler';
