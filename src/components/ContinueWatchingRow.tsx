@@ -83,7 +83,7 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
 
   return (
     <div
-      className="relative flex-shrink-0 border-b border-border bg-surface"
+      className="relative flex-shrink-0 border-b-2 border-accent bg-surface-hover"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setFocused(true)}
@@ -100,13 +100,13 @@ export const ContinueWatchingRow = memo(function ContinueWatchingRow({
           setFocused(false);
         }}
         aria-expanded={expanded}
-        className="flex h-10 w-full items-center justify-between px-6 text-fluid-sm font-medium text-text-muted hover:bg-surface-hover"
+        className="flex h-10 w-full items-center justify-between px-6 text-fluid-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-white"
       >
         <h2 className="contents">Continue Watching</h2>
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {expanded && (
-        <div className="absolute inset-x-0 top-10 z-10 max-h-[50vh] overflow-y-auto border-b border-border bg-surface px-6 pb-5 shadow-lg">
+        <div className="absolute inset-x-0 top-10 z-10 max-h-[50vh] overflow-y-auto border-b border-border bg-surface px-6 pb-5 pt-5 shadow-lg">
           {cards}
         </div>
       )}
