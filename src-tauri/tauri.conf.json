@@ -38,13 +38,17 @@
     ],
     "linux": {
       "deb": {
-        "desktopTemplate": "templates/better-iptv.desktop"
+        "desktopTemplate": "templates/better-iptv.desktop",
+        "postInstallScript": "scripts/postinst.sh",
+        "postRemoveScript": "scripts/postrm.sh"
       },
       "appimage": {
         "bundleMediaFramework": false
       },
       "rpm": {
-        "desktopTemplate": "templates/better-iptv.desktop"
+        "desktopTemplate": "templates/better-iptv.desktop",
+        "postInstallScript": "scripts/postinst.sh",
+        "postRemoveScript": "scripts/postrm.sh"
       }
     }
   }
