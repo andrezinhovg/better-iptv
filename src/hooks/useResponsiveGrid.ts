@@ -39,7 +39,13 @@ export function useResponsiveGrid(containerRef: RefObject<HTMLElement | null>): 
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [containerRef]);
+    // containerRef.current is intentionally a dep: MainScreen unmounts/remounts
+    // this container when swapping to SeriesView and back (Browse -> Go Back),
+    // which swaps in a brand new DOM node under the same stable ref object. Without
+    // watching .current, the observer stays attached to the old detached node and
+    // columns freezes at MIN_COLUMNS forever once the container is later hidden.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef, containerRef.current]);
 
   return { columns, gap: GAP };
 }
